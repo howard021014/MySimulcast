@@ -1,0 +1,59 @@
+# Xcode
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Build artifacts
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+*.resolved
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Simulators & provisioning
+*.mobileprovision
+*.certSigningRequest
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Apollo generated (regenerate via apollo-ios-cli)
+# Uncomment if you prefer not to commit generated files:
+# MySimulcast/Data/Network/Generated/
+
+# Claude Code
+.claude/
+
+# Apollo CLI binary
+apollo-ios-cli
+
+# PRD / planning docs
+anime-app-prd.md

@@ -1,0 +1,39 @@
+{
+  "schemaNamespace": "AniListAPI",
+  "input": {
+    "schemaSearchPaths": ["MySimulcast/Data/Network/**/*.graphqls"],
+    "operationSearchPaths": ["MySimulcast/Data/Network/**/*.graphql"]
+  },
+  "output": {
+    "schemaTypes": {
+      "moduleType": {
+        "embeddedInTarget": {
+          "name": "MySimulcast",
+          "accessModifier": "internal"
+        }
+      },
+      "path": "./MySimulcast/Data/Network/Generated/Schema"
+    },
+    "operations": {
+      "inSchemaModule": {}
+    },
+    "testMocks": {
+      "none": {}
+    }
+  },
+  "schemaDownloadConfiguration": {
+    "downloadMethod": {
+      "introspection": {
+        "endpointURL": "https://graphql.anilist.co",
+        "httpMethod": {
+          "POST": {}
+        },
+        "includeDeprecatedInputValues": false,
+        "outputFormat": "SDL"
+      }
+    },
+    "downloadTimeout": 60,
+    "headers": [],
+    "outputPath": "./MySimulcast/Data/Network/schema.graphqls"
+  }
+}
