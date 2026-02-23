@@ -1,19 +1,19 @@
-//
-//  MySimulcastApp.swift
-//  MySimulcast
-//
-//  Created by Howard tsai on 2026-02-18.
-//
-
 import SwiftUI
 
 @main
 struct MySimulcastApp: App {
-    private let animeRepository = AnimeRepository()
+    private let imageCache = ImageCache()
+    private let viewModel: SimulcastBrowseViewModel = {
+        let repo = AnimeRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        return SimulcastBrowseViewModel(useCase: useCase)
+    }()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SimulcastBrowseView()
+                .environment(viewModel)
+                .environment(\.imageCache, imageCache)
         }
     }
 }
