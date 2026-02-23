@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AnimeCardView: View {
     let anime: Anime
+    let onToggleFavourite: () -> Void
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -22,9 +23,12 @@ struct AnimeCardView: View {
                 }
                 .aspectRatio(1, contentMode: .fit)
 
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(.pink)
-                    .padding(8)
+                Button(action: onToggleFavourite) {
+                    Image(systemName: anime.isFavourited ? "heart.fill" : "heart")
+                        .foregroundStyle(.pink)
+                        .padding(8)
+                }
+                .buttonStyle(.plain)
             }
             .clipped()
 

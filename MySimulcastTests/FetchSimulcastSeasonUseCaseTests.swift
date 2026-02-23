@@ -76,7 +76,8 @@ struct SimulcastBrowseViewModelTests {
     func startsIdle() {
         let repo = MockAnimeRepository()
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
+        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         if case .idle = viewModel.browseState { } else {
             Issue.record("Expected idle state")
@@ -91,7 +92,8 @@ struct SimulcastBrowseViewModelTests {
         let repo = MockAnimeRepository()
         repo.result = .success(season)
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
+        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         await viewModel.loadSeason()
 
@@ -110,7 +112,8 @@ struct SimulcastBrowseViewModelTests {
         let repo = MockAnimeRepository()
         repo.result = .failure(TestError())
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
+        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         await viewModel.loadSeason()
 

@@ -51,7 +51,9 @@ struct SimulcastBrowseView: View {
         VStack(alignment: .leading, spacing: 8) {
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.anime) { anime in
-                    AnimeCardView(anime: anime)
+                    AnimeCardView(anime: anime) {
+                        Task { await viewModel.toggleFavourite(anime: anime) }
+                    }
                 }
             }
 
