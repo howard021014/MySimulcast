@@ -2,35 +2,33 @@ import SwiftUI
 
 struct AnimeCardView: View {
     let anime: Anime
+    let scheduleText: String
     let onToggleFavourite: () -> Void
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "EEE MMM d"
-        return f
-    }()
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                CachedAsyncImage(url: anime.coverImageURL) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
+            Color.clear
+                .aspectRatio(2/3, contentMode: .fit)
+                .overlay {
+                    CachedAsyncImage(url: anime.coverImageURL) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                    }
                 }
-                .aspectRatio(1, contentMode: .fit)
-
-                Button(action: onToggleFavourite) {
-                    Image(systemName: anime.isFavourited ? "heart.fill" : "heart")
-                        .foregroundStyle(.pink)
-                        .padding(8)
+                .clipped()
+                .overlay(alignment: .topTrailing) {
+                    Button(action: onToggleFavourite) {
+                        Image(systemName: anime.isFavourited ? "heart.fill" : "heart")
+                            .foregroundStyle(.pink)
+                            .padding(12)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-            }
-            .clipped()
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(anime.title)
@@ -38,23 +36,17 @@ struct AnimeCardView: View {
                     .bold()
                     .lineLimit(2)
 
-                if let schedule = anime.airingSchedule {
-                    Label("Next Episode", systemImage: "calendar")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Label(airingString(for: schedule), systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Label(scheduleText, systemImage: "clock")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(8)
+            .padding(.horizontal, 12).padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
 
-    private func airingString(for schedule: AiringSchedule) -> String {
-        "Ep \(schedule.nextEpisode) · \(Self.dateFormatter.string(from: schedule.nextAiringAt))"
+            Spacer(minLength: 0)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

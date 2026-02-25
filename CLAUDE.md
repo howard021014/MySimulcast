@@ -273,7 +273,7 @@ Use **Swift Testing** framework (modern Apple testing):
 
 Use the XcodeBuildMCP and Apple Xcode MCP tools to build and search for Apple APIs:
 1. List available simulators and boot an iPhone 17 Pro
-2. Build and run the project for that simulator
+2. After each change or modification on the code, build and run the simulator to view the latest changes.
 
 ## SwiftLint Configuration
 

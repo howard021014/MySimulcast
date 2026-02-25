@@ -43,28 +43,28 @@ struct FetchSimulcastSeasonUseCaseTests {
     @Test("Jan–Mar is winter", arguments: [1, 2, 3])
     func winterMonths(month: Int) {
         let date = Calendar.current.date(from: DateComponents(year: 2026, month: month))!
-        let (season, _) = FetchSimulcastSeasonUseCase.currentSimulcastSeason(for: date)
+        let (season, _) = Season.current(for: date)
         #expect(season == .winter)
     }
 
     @Test("Apr–Jun is spring", arguments: [4, 5, 6])
     func springMonths(month: Int) {
         let date = Calendar.current.date(from: DateComponents(year: 2026, month: month))!
-        let (season, _) = FetchSimulcastSeasonUseCase.currentSimulcastSeason(for: date)
+        let (season, _) = Season.current(for: date)
         #expect(season == .spring)
     }
 
     @Test("Jul–Sep is summer", arguments: [7, 8, 9])
     func summerMonths(month: Int) {
         let date = Calendar.current.date(from: DateComponents(year: 2026, month: month))!
-        let (season, _) = FetchSimulcastSeasonUseCase.currentSimulcastSeason(for: date)
+        let (season, _) = Season.current(for: date)
         #expect(season == .summer)
     }
 
     @Test("Oct–Dec is fall", arguments: [10, 11, 12])
     func fallMonths(month: Int) {
         let date = Calendar.current.date(from: DateComponents(year: 2026, month: month))!
-        let (season, _) = FetchSimulcastSeasonUseCase.currentSimulcastSeason(for: date)
+        let (season, _) = Season.current(for: date)
         #expect(season == .fall)
     }
 }

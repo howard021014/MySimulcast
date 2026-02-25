@@ -34,7 +34,7 @@ enum BrowseState {
     init(useCase: FetchSimulcastSeasonUseCase, toggleUseCase: ToggleFavouriteUseCase) {
         self.useCase = useCase
         self.toggleUseCase = toggleUseCase
-        let (season, year) = FetchSimulcastSeasonUseCase.currentSimulcastSeason()
+        let (season, year) = Season.current()
         self.currentSeason = season
         self.currentYear = year
     }
@@ -59,7 +59,9 @@ enum BrowseState {
     func toggleFavourite(anime: Anime) async {
         do {
             let newState = try await toggleUseCase.execute(
-                animeID: anime.id,
+                anime: anime,
+                season: currentSeason,
+                year: currentYear,
                 currentlyFavourited: favouriteIDs.contains(anime.id)
             )
             if newState {

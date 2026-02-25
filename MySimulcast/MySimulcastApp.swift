@@ -5,7 +5,8 @@ import SwiftData
 struct MySimulcastApp: App {
     private let imageCache = ImageCache()
     private let modelContainer: ModelContainer
-    private let viewModel: SimulcastBrowseViewModel
+    private let browseViewModel: SimulcastBrowseViewModel
+    private let favouritesViewModel: FavouritesViewModel
 
     init() {
         let container = try! ModelContainer(for: FavouriteEntry.self)
@@ -15,13 +16,17 @@ struct MySimulcastApp: App {
         let fetchUseCase = FetchSimulcastSeasonUseCase(repository: animeRepo)
         let favouritesRepo = FavouritesRepository(modelContainer: container)
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
-        viewModel = SimulcastBrowseViewModel(useCase: fetchUseCase, toggleUseCase: toggleUseCase)
+        browseViewModel = SimulcastBrowseViewModel(useCase: fetchUseCase, toggleUseCase: toggleUseCase)
+
+        let getUseCase = GetFavouritesUseCase(repository: favouritesRepo)
+        favouritesViewModel = FavouritesViewModel(getUseCase: getUseCase, toggleUseCase: toggleUseCase)
     }
 
     var body: some Scene {
         WindowGroup {
-            SimulcastBrowseView()
-                .environment(viewModel)
+            AppCoordinator()
+                .environment(browseViewModel)
+                .environment(favouritesViewModel)
                 .environment(\.imageCache, imageCache)
         }
     }

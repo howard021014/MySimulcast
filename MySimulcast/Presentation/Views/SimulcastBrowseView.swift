@@ -3,7 +3,7 @@ import SwiftUI
 struct SimulcastBrowseView: View {
     @Environment(SimulcastBrowseViewModel.self) private var viewModel
 
-    private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible())]
+    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible())]
 
     var body: some View {
         NavigationStack {
@@ -21,6 +21,13 @@ struct SimulcastBrowseView: View {
                         animeGrid
                     case .error(let message):
                         errorView(message: message)
+                    }
+
+                    if let fetchedAt = viewModel.fetchedAt {
+                        Text("Updated \(fetchedAt.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.horizontal)
@@ -47,24 +54,27 @@ struct SimulcastBrowseView: View {
         }
     }
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE MMM d"
+        return f
+    }()
+
     private var animeGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LazyVGrid(columns: columns, spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.anime) { anime in
-                    AnimeCardView(anime: anime) {
+                    AnimeCardView(anime: anime, scheduleText: scheduleText(for: anime)) {
                         Task { await viewModel.toggleFavourite(anime: anime) }
                     }
                 }
             }
-
-            if let fetchedAt = viewModel.fetchedAt {
-                Text("Updated \(fetchedAt.formatted(.relative(presentation: .named)))")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
-            }
         }
+    }
+
+    private func scheduleText(for anime: Anime) -> String {
+        guard let schedule = anime.airingSchedule else { return "No schedule info" }
+        return "Ep \(schedule.nextEpisode) · \(Self.dateFormatter.string(from: schedule.nextAiringAt))"
     }
 
     private func errorView(message: String) -> some View {
