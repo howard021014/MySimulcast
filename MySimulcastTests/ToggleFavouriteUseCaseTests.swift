@@ -23,7 +23,7 @@ final class MockFavouritesRepository: FavouritesRepositoryProtocol {
 
 private let testAnime = Anime(
     id: 1, title: "Test Anime", coverImageURL: nil, thumbnailImageURL: nil,
-    description: nil, airingSchedule: nil, isFavourited: false
+    description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false
 )
 
 @Suite("ToggleFavouriteUseCase")
@@ -87,9 +87,9 @@ struct SimulcastBrowseViewModelFavouritesTests {
     func animeReflectsFavouriteIDs() async {
         let anime = [
             Anime(id: 1, title: "A", coverImageURL: nil, thumbnailImageURL: nil,
-                  description: nil, airingSchedule: nil, isFavourited: false),
+                  description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false),
             Anime(id: 2, title: "B", coverImageURL: nil, thumbnailImageURL: nil,
-                  description: nil, airingSchedule: nil, isFavourited: false)
+                  description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)
         ]
         let viewModel = makeViewModel(anime: anime, favouriteIDs: [2])
 
@@ -103,7 +103,7 @@ struct SimulcastBrowseViewModelFavouritesTests {
     @Test("Toggle favourite adds to favourites")
     func toggleAdds() async {
         let anime = Anime(id: 1, title: "A", coverImageURL: nil, thumbnailImageURL: nil,
-                          description: nil, airingSchedule: nil, isFavourited: false)
+                          description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)
         let viewModel = makeViewModel(anime: [anime])
 
         await viewModel.loadSeason()
@@ -115,7 +115,7 @@ struct SimulcastBrowseViewModelFavouritesTests {
     @Test("Toggle favourite removes from favourites")
     func toggleRemoves() async {
         let anime = Anime(id: 1, title: "A", coverImageURL: nil, thumbnailImageURL: nil,
-                          description: nil, airingSchedule: nil, isFavourited: false)
+                          description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)
         let viewModel = makeViewModel(anime: [anime], favouriteIDs: [1])
 
         await viewModel.loadSeason()

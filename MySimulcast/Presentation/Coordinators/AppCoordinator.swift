@@ -7,7 +7,7 @@ struct AppCoordinator: View {
                 .tabItem { Label("Simulcast", systemImage: "tv") }
             FavouritesView()
                 .tabItem { Label("Favourites", systemImage: "heart.fill") }
-            Text("Search")
+            SearchView()
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
         }
     }

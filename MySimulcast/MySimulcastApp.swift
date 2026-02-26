@@ -7,6 +7,7 @@ struct MySimulcastApp: App {
     private let modelContainer: ModelContainer
     private let browseViewModel: SimulcastBrowseViewModel
     private let favouritesViewModel: FavouritesViewModel
+    private let searchViewModel: SearchViewModel
 
     init() {
         let container = try! ModelContainer(for: FavouriteEntry.self)
@@ -20,6 +21,9 @@ struct MySimulcastApp: App {
 
         let getUseCase = GetFavouritesUseCase(repository: favouritesRepo)
         favouritesViewModel = FavouritesViewModel(getUseCase: getUseCase, toggleUseCase: toggleUseCase)
+
+        let searchUseCase = SearchAnimeUseCase(repository: animeRepo)
+        searchViewModel = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase)
     }
 
     var body: some Scene {
@@ -27,6 +31,7 @@ struct MySimulcastApp: App {
             AppCoordinator()
                 .environment(browseViewModel)
                 .environment(favouritesViewModel)
+                .environment(searchViewModel)
                 .environment(\.imageCache, imageCache)
         }
     }

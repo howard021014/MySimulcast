@@ -19,7 +19,7 @@ struct GetFavouritesUseCaseTests {
     func returnsMappedFavourites() async throws {
         let repo = MockFavouritesRepository()
         let anime = Anime(id: 42, title: "My Anime", coverImageURL: nil, thumbnailImageURL: nil,
-                          description: nil, airingSchedule: nil, isFavourited: true)
+                          description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: true)
         repo.storedFavourites = [
             FavouriteAnime(anime: anime, season: .winter, year: 2026, addedAt: Date())
         ]

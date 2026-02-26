@@ -7,5 +7,7 @@ struct Anime: Identifiable, Codable {
     let thumbnailImageURL: URL?
     let description: String?
     let airingSchedule: AiringSchedule?
+    let season: Season?
+    let seasonYear: Int?
     var isFavourited: Bool
 }

@@ -4,7 +4,7 @@ import Foundation
 
 private func makeAnime(id: Int, title: String = "Anime", schedule: AiringSchedule? = nil) -> Anime {
     Anime(id: id, title: title, coverImageURL: nil, thumbnailImageURL: nil,
-          description: nil, airingSchedule: schedule, isFavourited: true)
+          description: nil, airingSchedule: schedule, season: nil, seasonYear: nil, isFavourited: true)
 }
 
 private func makeFavourite(id: Int, season: Season = .winter, year: Int = 2026, schedule: AiringSchedule? = nil) -> FavouriteAnime {

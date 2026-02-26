@@ -10,6 +10,14 @@ final class MockAnimeRepository: AnimeRepositoryProtocol {
     func fetchSimulcastSeason(season: Season, year: Int) async throws -> SimulcastSeason {
         try result.get()
     }
+
+    var searchResult: Result<SearchResult, Error> = .success(
+        SearchResult(anime: [], currentPage: 1, hasNextPage: false)
+    )
+
+    func searchAnime(query: String, page: Int) async throws -> SearchResult {
+        try searchResult.get()
+    }
 }
 
 @Suite("FetchSimulcastSeasonUseCase")
@@ -87,7 +95,7 @@ struct SimulcastBrowseViewModelTests {
     @Test("Transitions to loaded")
     func transitionsToLoaded() async {
         let anime = [Anime(id: 1, title: "Test", coverImageURL: nil, thumbnailImageURL: nil,
-                           description: nil, airingSchedule: nil, isFavourited: false)]
+                           description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)]
         let season = SimulcastSeason(season: .winter, year: 2026, anime: anime, fetchedAt: Date())
         let repo = MockAnimeRepository()
         repo.result = .success(season)

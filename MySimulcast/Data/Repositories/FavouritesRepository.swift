@@ -40,6 +40,8 @@ actor FavouritesRepository: FavouritesRepositoryProtocol {
                 thumbnailImageURL: entry.thumbnailImageURLString.flatMap(URL.init(string:)),
                 description: nil,
                 airingSchedule: airingSchedule,
+                season: season,
+                seasonYear: entry.seasonYear,
                 isFavourited: true
             )
             return FavouriteAnime(anime: anime, season: season, year: entry.seasonYear, addedAt: entry.addedAt)
