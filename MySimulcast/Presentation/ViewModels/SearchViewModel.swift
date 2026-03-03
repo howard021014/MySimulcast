@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum SearchState {
     case idle
@@ -12,6 +13,8 @@ enum SearchState {
     var state: SearchState = .idle
     var results: [Anime] = []
     var isLoadingNextPage = false
+    var showNotificationPrompt = false
+    var showDeniedBanner = false
 
     var displayedResults: [Anime] {
         results.map { anime in
@@ -26,13 +29,26 @@ enum SearchState {
     private var hasNextPage = false
     private var lastSearchedQuery = ""
     private var searchTask: Task<Void, Never>?
+    private var pendingNotificationAnime: Anime?
+
+    private var notificationPromptDismissCount: Int {
+        get { UserDefaults.standard.integer(forKey: "notificationPromptDismissCount") }
+        set { UserDefaults.standard.set(newValue, forKey: "notificationPromptDismissCount") }
+    }
+
+    private var isNotificationsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "notificationsEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "notificationsEnabled") }
+    }
 
     private let searchUseCase: SearchAnimeUseCase
     private let toggleUseCase: ToggleFavouriteUseCase
+    private let scheduleNotificationUseCase: ScheduleNotificationUseCase
 
-    init(searchUseCase: SearchAnimeUseCase, toggleUseCase: ToggleFavouriteUseCase) {
+    init(searchUseCase: SearchAnimeUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase) {
         self.searchUseCase = searchUseCase
         self.toggleUseCase = toggleUseCase
+        self.scheduleNotificationUseCase = scheduleNotificationUseCase
     }
 
     func searchTextChanged() {
@@ -92,10 +108,50 @@ enum SearchState {
             )
             if newState {
                 favouriteIDs.insert(anime.id)
+                await handleFavourited(anime: anime, season: season, year: year)
             } else {
                 favouriteIDs.remove(anime.id)
+                await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
             }
         } catch {}
+    }
+
+    func onNotificationPromptEnable() async {
+        guard let anime = pendingNotificationAnime else { return }
+        let granted = (try? await scheduleNotificationUseCase.requestAuthorization()) ?? false
+        if granted {
+            isNotificationsEnabled = true
+            let season = anime.season ?? Season.current().0
+            let year = anime.seasonYear ?? Season.current().1
+            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: season, year: year)
+        }
+        pendingNotificationAnime = nil
+        showNotificationPrompt = false
+    }
+
+    func onNotificationPromptDismiss() {
+        notificationPromptDismissCount += 1
+        pendingNotificationAnime = nil
+        showNotificationPrompt = false
+    }
+
+    private func handleFavourited(anime: Anime, season: Season, year: Int) async {
+        let isSimulcasting = anime.airingSchedule != nil
+        guard isSimulcasting else { return }
+
+        let status = await scheduleNotificationUseCase.authorizationStatus()
+        switch status {
+        case .notDetermined:
+            if notificationPromptDismissCount < 2 {
+                pendingNotificationAnime = anime
+                showNotificationPrompt = true
+            }
+        case .authorized, .provisional:
+            isNotificationsEnabled = true
+            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: season, year: year)
+        case .denied:
+            showDeniedBanner = true
+        }
     }
 
     private func performSearch(query: String) async {

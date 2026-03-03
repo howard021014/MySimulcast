@@ -20,7 +20,9 @@ struct SearchViewModelTests {
         favouritesRepo.ids = favouriteIDs
         let searchUseCase = SearchAnimeUseCase(repository: animeRepo)
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
-        let vm = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase)
+        let service = MockNotificationService()
+        let scheduleNotificationUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
+        let vm = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleNotificationUseCase)
         return (vm, animeRepo, favouritesRepo)
     }
 
@@ -145,9 +147,12 @@ struct SearchViewModelTests {
         let animeRepo = MockAnimeRepository()
         animeRepo.searchResult = .failure(TestError())
         let favouritesRepo = MockFavouritesRepository()
+        let service = MockNotificationService()
+        let scheduleNotificationUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
         let vm = SearchViewModel(
             searchUseCase: SearchAnimeUseCase(repository: animeRepo),
-            toggleUseCase: ToggleFavouriteUseCase(repository: favouritesRepo)
+            toggleUseCase: ToggleFavouriteUseCase(repository: favouritesRepo),
+            scheduleNotificationUseCase: scheduleNotificationUseCase
         )
 
         vm.searchText = "test query"

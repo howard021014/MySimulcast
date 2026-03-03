@@ -28,9 +28,11 @@ enum FavouriteFilter: Hashable {
 @Observable final class FavouritesViewModel {
     var state: FavouritesState = .idle
     var selectedFilter: FavouriteFilter = .all
+    var showDeniedBanner = false
 
     private let getUseCase: GetFavouritesUseCase
     private let toggleUseCase: ToggleFavouriteUseCase
+    private let scheduleNotificationUseCase: ScheduleNotificationUseCase
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -38,23 +40,31 @@ enum FavouriteFilter: Hashable {
         return f
     }()
 
-    init(getUseCase: GetFavouritesUseCase, toggleUseCase: ToggleFavouriteUseCase) {
+    init(getUseCase: GetFavouritesUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase) {
         self.getUseCase = getUseCase
         self.toggleUseCase = toggleUseCase
+        self.scheduleNotificationUseCase = scheduleNotificationUseCase
     }
 
     var availableFilters: [FavouriteFilter] {
         guard case .loaded(let items) = state else { return [.all] }
         var seen = Set<FavouriteFilter>()
-        var uniqueSeasons: [FavouriteFilter] = []
+        var uniqueSeasons: [(Season, Int)] = []
         for item in items {
             let filter = FavouriteFilter.season(item.season, item.year)
             if seen.insert(filter).inserted {
-                uniqueSeasons.append(filter)
+                uniqueSeasons.append((item.season, item.year))
             }
         }
         guard uniqueSeasons.count > 1 else { return [.all] }
-        return [.all] + uniqueSeasons
+        let seasonOrder: [Season] = [.fall, .summer, .spring, .winter]
+        uniqueSeasons.sort { a, b in
+            if a.1 != b.1 { return a.1 > b.1 }
+            let aIdx = seasonOrder.firstIndex(of: a.0) ?? 0
+            let bIdx = seasonOrder.firstIndex(of: b.0) ?? 0
+            return aIdx < bIdx
+        }
+        return [.all] + uniqueSeasons.map { FavouriteFilter.season($0.0, $0.1) }
     }
 
     var displayedAnime: [FavouriteDisplayItem] {
@@ -63,7 +73,12 @@ enum FavouriteFilter: Hashable {
         let filtered: [FavouriteAnime]
         switch selectedFilter {
         case .all:
-            filtered = items
+            filtered = items.sorted { a, b in
+                let aCurrent = a.season == currentSeason && a.year == currentYear
+                let bCurrent = b.season == currentSeason && b.year == currentYear
+                if aCurrent != bCurrent { return aCurrent }
+                return false
+            }
         case .season(let s, let y):
             filtered = items.filter { $0.season == s && $0.year == y }
         }
@@ -99,9 +114,15 @@ enum FavouriteFilter: Hashable {
                 year: entry.year,
                 currentlyFavourited: true
             )
+            await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
         } catch {
             state = .loaded(items)
         }
+    }
+
+    func checkDeniedStatus() async {
+        let status = await scheduleNotificationUseCase.authorizationStatus()
+        showDeniedBanner = (status == .denied)
     }
 
     private func scheduleText(for item: FavouriteAnime, currentSeason: Season, currentYear: Int) -> String {

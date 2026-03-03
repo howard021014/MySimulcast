@@ -17,9 +17,12 @@ struct FavouritesViewModelTests {
     private func makeViewModel(favourites: [FavouriteAnime] = []) -> FavouritesViewModel {
         let repo = MockFavouritesRepository()
         repo.storedFavourites = favourites
+        let service = MockNotificationService()
+        let scheduleUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
         return FavouritesViewModel(
             getUseCase: GetFavouritesUseCase(repository: repo),
-            toggleUseCase: ToggleFavouriteUseCase(repository: repo)
+            toggleUseCase: ToggleFavouriteUseCase(repository: repo),
+            scheduleNotificationUseCase: scheduleUseCase
         )
     }
 

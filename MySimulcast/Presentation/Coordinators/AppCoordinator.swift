@@ -9,6 +9,8 @@ struct AppCoordinator: View {
                 .tabItem { Label("Favourites", systemImage: "heart.fill") }
             SearchView()
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
         }
     }
 }

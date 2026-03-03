@@ -8,6 +8,7 @@ struct MySimulcastApp: App {
     private let browseViewModel: SimulcastBrowseViewModel
     private let favouritesViewModel: FavouritesViewModel
     private let searchViewModel: SearchViewModel
+    private let settingsViewModel: SettingsViewModel
 
     init() {
         let container = try! ModelContainer(for: FavouriteEntry.self)
@@ -17,13 +18,41 @@ struct MySimulcastApp: App {
         let fetchUseCase = FetchSimulcastSeasonUseCase(repository: animeRepo)
         let favouritesRepo = FavouritesRepository(modelContainer: container)
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
-        browseViewModel = SimulcastBrowseViewModel(useCase: fetchUseCase, toggleUseCase: toggleUseCase)
+
+        let notificationManager = NotificationManager()
+        let isNotificationsEnabled = { UserDefaults.standard.bool(forKey: "notificationsEnabled") }
+        let scheduleNotificationUseCase = ScheduleNotificationUseCase(
+            notificationService: notificationManager,
+            isNotificationsEnabled: isNotificationsEnabled
+        )
+        let manageNotificationsUseCase = ManageNotificationsUseCase(
+            scheduleUseCase: scheduleNotificationUseCase,
+            favouritesRepository: favouritesRepo,
+            notificationService: notificationManager
+        )
+
+        browseViewModel = SimulcastBrowseViewModel(
+            useCase: fetchUseCase,
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleNotificationUseCase,
+            manageNotificationsUseCase: manageNotificationsUseCase
+        )
 
         let getUseCase = GetFavouritesUseCase(repository: favouritesRepo)
-        favouritesViewModel = FavouritesViewModel(getUseCase: getUseCase, toggleUseCase: toggleUseCase)
+        favouritesViewModel = FavouritesViewModel(
+            getUseCase: getUseCase,
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleNotificationUseCase
+        )
 
         let searchUseCase = SearchAnimeUseCase(repository: animeRepo)
-        searchViewModel = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase)
+        searchViewModel = SearchViewModel(
+            searchUseCase: searchUseCase,
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleNotificationUseCase
+        )
+
+        settingsViewModel = SettingsViewModel(manageUseCase: manageNotificationsUseCase)
     }
 
     var body: some Scene {
@@ -32,6 +61,7 @@ struct MySimulcastApp: App {
                 .environment(browseViewModel)
                 .environment(favouritesViewModel)
                 .environment(searchViewModel)
+                .environment(settingsViewModel)
                 .environment(\.imageCache, imageCache)
         }
     }

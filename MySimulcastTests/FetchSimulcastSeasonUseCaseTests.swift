@@ -80,12 +80,20 @@ struct FetchSimulcastSeasonUseCaseTests {
 @Suite("SimulcastBrowseViewModel")
 struct SimulcastBrowseViewModelTests {
 
+    private func makeViewModel(useCase: FetchSimulcastSeasonUseCase, toggleUseCase: ToggleFavouriteUseCase) -> SimulcastBrowseViewModel {
+        let service = MockNotificationService()
+        let repo = MockFavouritesRepository()
+        let scheduleUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
+        let manageUseCase = ManageNotificationsUseCase(scheduleUseCase: scheduleUseCase, favouritesRepository: repo, notificationService: service)
+        return SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleUseCase, manageNotificationsUseCase: manageUseCase)
+    }
+
     @Test("Starts idle")
     func startsIdle() {
         let repo = MockAnimeRepository()
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
+        let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         if case .idle = viewModel.browseState { } else {
             Issue.record("Expected idle state")
@@ -101,7 +109,7 @@ struct SimulcastBrowseViewModelTests {
         repo.result = .success(season)
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
+        let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         await viewModel.loadSeason()
 
@@ -121,7 +129,7 @@ struct SimulcastBrowseViewModelTests {
         repo.result = .failure(TestError())
         let useCase = FetchSimulcastSeasonUseCase(repository: repo)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
-        let viewModel = SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
+        let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
         await viewModel.loadSeason()
 

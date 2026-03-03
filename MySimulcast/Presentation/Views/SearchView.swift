@@ -31,6 +31,15 @@ struct SearchView: View {
             .onAppear {
                 Task { await viewModel.reloadFavouriteIDs() }
             }
+            .sheet(isPresented: Binding(
+                get: { viewModel.showNotificationPrompt },
+                set: { if !$0 { viewModel.onNotificationPromptDismiss() } }
+            )) {
+                NotificationPermissionSheet(
+                    onEnable: { Task { await viewModel.onNotificationPromptEnable() } },
+                    onDismiss: { viewModel.onNotificationPromptDismiss() }
+                )
+            }
         }
     }
 

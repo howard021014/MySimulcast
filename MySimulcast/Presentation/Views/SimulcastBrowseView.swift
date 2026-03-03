@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SimulcastBrowseView: View {
     @Environment(SimulcastBrowseViewModel.self) private var viewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible())]
 
@@ -33,11 +34,22 @@ struct SimulcastBrowseView: View {
                 .padding(.horizontal)
             }
             .navigationTitle("Simulcast")
-            .refreshable {
-                await viewModel.refresh()
-            }
             .task {
                 await viewModel.loadSeason()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    Task { await viewModel.checkStaleAndRefresh() }
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { viewModel.showNotificationPrompt },
+                set: { if !$0 { viewModel.onNotificationPromptDismiss() } }
+            )) {
+                NotificationPermissionSheet(
+                    onEnable: { Task { await viewModel.onNotificationPromptEnable() } },
+                    onDismiss: { viewModel.onNotificationPromptDismiss() }
+                )
             }
         }
     }

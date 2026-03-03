@@ -9,6 +9,10 @@ struct FavouritesView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if viewModel.showDeniedBanner {
+                        deniedBanner
+                    }
+
                     if viewModel.availableFilters.count > 1 {
                         filterPillsRow
                     }
@@ -37,8 +41,30 @@ struct FavouritesView: View {
             .navigationTitle("Favourites")
             .task {
                 await viewModel.load()
+                await viewModel.checkDeniedStatus()
             }
         }
+    }
+
+    private var deniedBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bell.slash")
+                .foregroundStyle(.secondary)
+            Text("Notifications are disabled.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.subheadline)
+            .buttonStyle(.bordered)
+        }
+        .padding(12)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var filterPillsRow: some View {
