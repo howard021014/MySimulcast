@@ -14,6 +14,7 @@ enum BrowseState {
     var currentYear: Int
     var showNotificationPrompt = false
     var showDeniedBanner = false
+    var isShowingCacheBanner = false
 
     private var favouriteIDs: Set<Int> = []
     private var pendingNotificationAnime: Anime?
@@ -46,17 +47,21 @@ enum BrowseState {
     private let toggleUseCase: ToggleFavouriteUseCase
     private let scheduleNotificationUseCase: ScheduleNotificationUseCase
     private let manageNotificationsUseCase: ManageNotificationsUseCase
+    private let networkStatus: NetworkStatusProviding
+    private var retryScheduler = RetryScheduler()
 
     init(
         useCase: FetchSimulcastSeasonUseCase,
         toggleUseCase: ToggleFavouriteUseCase,
         scheduleNotificationUseCase: ScheduleNotificationUseCase,
-        manageNotificationsUseCase: ManageNotificationsUseCase
+        manageNotificationsUseCase: ManageNotificationsUseCase,
+        networkStatus: NetworkStatusProviding
     ) {
         self.useCase = useCase
         self.toggleUseCase = toggleUseCase
         self.scheduleNotificationUseCase = scheduleNotificationUseCase
         self.manageNotificationsUseCase = manageNotificationsUseCase
+        self.networkStatus = networkStatus
         let (season, year) = Season.current()
         self.currentSeason = season
         self.currentYear = year
@@ -65,14 +70,24 @@ enum BrowseState {
     func loadSeason() async {
         browseState = .loading
         do {
-            async let season = useCase.execute(season: currentSeason, year: currentYear)
+            async let fetchResult = useCase.execute(season: currentSeason, year: currentYear)
             async let ids = toggleUseCase.loadFavouriteIDs()
-            let (result, loadedIDs) = try await (season, ids)
+            let (result, loadedIDs) = try await (fetchResult, ids)
             favouriteIDs = loadedIDs
-            browseState = .loaded(result)
+            browseState = .loaded(result.season)
+            isShowingCacheBanner = result.isFromCache
+            if !result.isFromCache {
+                retryScheduler.reset()
+            }
         } catch {
             browseState = .error(error.localizedDescription)
         }
+    }
+
+    func retryLoadSeason() async {
+        let delay = retryScheduler.nextDelay()
+        try? await Task.sleep(for: .seconds(delay))
+        await loadSeason()
     }
 
     func toggleFavourite(anime: Anime) async {

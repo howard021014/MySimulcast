@@ -11,13 +11,15 @@ struct MySimulcastApp: App {
     private let settingsViewModel: SettingsViewModel
 
     init() {
-        let container = try! ModelContainer(for: FavouriteEntry.self)
+        let container = try! ModelContainer(for: FavouriteEntry.self, CachedSeasonEntry.self)
         modelContainer = container
 
         let animeRepo = AnimeRepository()
-        let fetchUseCase = FetchSimulcastSeasonUseCase(repository: animeRepo)
+        let seasonCache = SeasonCacheRepository(modelContainer: container)
+        let fetchUseCase = FetchSimulcastSeasonUseCase(repository: animeRepo, cacheRepository: seasonCache)
         let favouritesRepo = FavouritesRepository(modelContainer: container)
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
+        let networkMonitor = NetworkMonitor()
 
         let notificationManager = NotificationManager()
         let isNotificationsEnabled = { UserDefaults.standard.bool(forKey: "notificationsEnabled") }
@@ -35,7 +37,8 @@ struct MySimulcastApp: App {
             useCase: fetchUseCase,
             toggleUseCase: toggleUseCase,
             scheduleNotificationUseCase: scheduleNotificationUseCase,
-            manageNotificationsUseCase: manageNotificationsUseCase
+            manageNotificationsUseCase: manageNotificationsUseCase,
+            networkStatus: networkMonitor
         )
 
         let getUseCase = GetFavouritesUseCase(repository: favouritesRepo)
@@ -49,7 +52,8 @@ struct MySimulcastApp: App {
         searchViewModel = SearchViewModel(
             searchUseCase: searchUseCase,
             toggleUseCase: toggleUseCase,
-            scheduleNotificationUseCase: scheduleNotificationUseCase
+            scheduleNotificationUseCase: scheduleNotificationUseCase,
+            networkStatus: networkMonitor
         )
 
         settingsViewModel = SettingsViewModel(manageUseCase: manageNotificationsUseCase)

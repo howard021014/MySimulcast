@@ -28,20 +28,53 @@ struct FetchSimulcastSeasonUseCaseTests {
         let expected = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
         let repo = MockAnimeRepository()
         repo.result = .success(expected)
-        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
 
         let result = try await useCase.execute(season: .winter, year: 2026)
 
-        #expect(result.season == expected.season)
-        #expect(result.year == expected.year)
+        #expect(result.season.season == expected.season)
+        #expect(result.season.year == expected.year)
+        #expect(result.isFromCache == false)
     }
 
-    @Test("Propagates errors from repository")
-    func propagatesErrors() async {
+    @Test("Network success caches the result")
+    func networkSuccessCaches() async throws {
+        let expected = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
+        let repo = MockAnimeRepository()
+        repo.result = .success(expected)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
+
+        _ = try await useCase.execute(season: .winter, year: 2026)
+
+        let cached = await cache.loadCachedSeason(season: .winter, year: 2026)
+        #expect(cached != nil)
+    }
+
+    @Test("Network failure returns cached data")
+    func networkFailureReturnsCache() async throws {
         struct TestError: Error {}
         let repo = MockAnimeRepository()
         repo.result = .failure(TestError())
-        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        let cache = MockSeasonCacheRepository()
+        let cachedSeason = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
+        await cache.cacheSeason(cachedSeason)
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
+
+        let result = try await useCase.execute(season: .winter, year: 2026)
+
+        #expect(result.isFromCache == true)
+        #expect(result.season.season == .winter)
+    }
+
+    @Test("Network failure with no cache rethrows error")
+    func networkFailureNoCacheThrows() async {
+        struct TestError: Error {}
+        let repo = MockAnimeRepository()
+        repo.result = .failure(TestError())
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
 
         await #expect(throws: TestError.self) {
             try await useCase.execute(season: .winter, year: 2026)
@@ -80,18 +113,19 @@ struct FetchSimulcastSeasonUseCaseTests {
 @Suite("SimulcastBrowseViewModel")
 struct SimulcastBrowseViewModelTests {
 
-    private func makeViewModel(useCase: FetchSimulcastSeasonUseCase, toggleUseCase: ToggleFavouriteUseCase) -> SimulcastBrowseViewModel {
+    private func makeViewModel(useCase: FetchSimulcastSeasonUseCase, toggleUseCase: ToggleFavouriteUseCase, networkStatus: MockNetworkStatus = MockNetworkStatus()) -> SimulcastBrowseViewModel {
         let service = MockNotificationService()
         let repo = MockFavouritesRepository()
         let scheduleUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
         let manageUseCase = ManageNotificationsUseCase(scheduleUseCase: scheduleUseCase, favouritesRepository: repo, notificationService: service)
-        return SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleUseCase, manageNotificationsUseCase: manageUseCase)
+        return SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleUseCase, manageNotificationsUseCase: manageUseCase, networkStatus: networkStatus)
     }
 
     @Test("Starts idle")
     func startsIdle() {
         let repo = MockAnimeRepository()
-        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
@@ -107,7 +141,8 @@ struct SimulcastBrowseViewModelTests {
         let season = SimulcastSeason(season: .winter, year: 2026, anime: anime, fetchedAt: Date())
         let repo = MockAnimeRepository()
         repo.result = .success(season)
-        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
@@ -127,7 +162,8 @@ struct SimulcastBrowseViewModelTests {
         }
         let repo = MockAnimeRepository()
         repo.result = .failure(TestError())
-        let useCase = FetchSimulcastSeasonUseCase(repository: repo)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
@@ -138,5 +174,37 @@ struct SimulcastBrowseViewModelTests {
         } else {
             Issue.record("Expected error state")
         }
+    }
+
+    @Test("Shows cache banner when result is from cache")
+    func showsCacheBanner() async {
+        struct TestError: Error {}
+        let repo = MockAnimeRepository()
+        repo.result = .failure(TestError())
+        let cache = MockSeasonCacheRepository()
+        let cachedSeason = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
+        await cache.cacheSeason(cachedSeason)
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
+        let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
+
+        await viewModel.loadSeason()
+
+        #expect(viewModel.isShowingCacheBanner == true)
+    }
+
+    @Test("Cache banner hidden on fresh network data")
+    func cacheBannerHiddenOnFreshData() async {
+        let season = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
+        let repo = MockAnimeRepository()
+        repo.result = .success(season)
+        let cache = MockSeasonCacheRepository()
+        let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
+        let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
+
+        await viewModel.loadSeason()
+
+        #expect(viewModel.isShowingCacheBanner == false)
     }
 }

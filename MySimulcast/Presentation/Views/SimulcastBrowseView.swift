@@ -12,6 +12,15 @@ struct SimulcastBrowseView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     seasonPillsRow
 
+                    if viewModel.isShowingCacheBanner {
+                        Label("Content may be outdated", systemImage: "wifi.slash")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                    }
+
                     switch viewModel.browseState {
                     case .idle:
                         EmptyView()
@@ -97,7 +106,7 @@ struct SimulcastBrowseView: View {
 
             Button("Try Again") {
                 Task {
-                    await viewModel.loadSeason()
+                    await viewModel.retryLoadSeason()
                 }
             }
             .buttonStyle(.borderedProminent)

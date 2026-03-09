@@ -7,19 +7,36 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     @Environment(\.imageCache) private var imageCache
     @State private var uiImage: UIImage?
+    @State private var didFail = false
 
     var body: some View {
         Group {
             if let uiImage {
                 content(Image(uiImage: uiImage))
+            } else if didFail {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .overlay {
+                        Image(systemName: "photo")
+                            .font(.title2)
+                            .foregroundStyle(.quaternary)
+                    }
             } else {
                 placeholder()
             }
         }
         .task(id: url) {
             uiImage = nil
-            guard let url else { return }
-            uiImage = await imageCache.image(for: url)
+            didFail = false
+            guard let url else {
+                didFail = true
+                return
+            }
+            if let loaded = await imageCache.image(for: url) {
+                uiImage = loaded
+            } else {
+                didFail = true
+            }
         }
     }
 }

@@ -12,8 +12,9 @@ struct SearchViewModelTests {
 
     private func makeViewModel(
         searchResult: SearchResult = SearchResult(anime: [], currentPage: 1, hasNextPage: false),
-        favouriteIDs: Set<Int> = []
-    ) -> (SearchViewModel, MockAnimeRepository, MockFavouritesRepository) {
+        favouriteIDs: Set<Int> = [],
+        networkStatus: MockNetworkStatus = MockNetworkStatus()
+    ) -> (SearchViewModel, MockAnimeRepository, MockFavouritesRepository, MockNetworkStatus) {
         let animeRepo = MockAnimeRepository()
         animeRepo.searchResult = .success(searchResult)
         let favouritesRepo = MockFavouritesRepository()
@@ -22,13 +23,13 @@ struct SearchViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
         let service = MockNotificationService()
         let scheduleNotificationUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
-        let vm = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleNotificationUseCase)
-        return (vm, animeRepo, favouritesRepo)
+        let vm = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleNotificationUseCase, networkStatus: networkStatus)
+        return (vm, animeRepo, favouritesRepo, networkStatus)
     }
 
     @Test("Initial state is idle")
     func initialStateIsIdle() {
-        let (vm, _, _) = makeViewModel()
+        let (vm, _, _, _) = makeViewModel()
         if case .idle = vm.state { } else {
             Issue.record("Expected idle state")
         }
@@ -36,7 +37,7 @@ struct SearchViewModelTests {
 
     @Test("Query less than 2 chars stays idle")
     func shortQueryStaysIdle() {
-        let (vm, _, _) = makeViewModel()
+        let (vm, _, _, _) = makeViewModel()
         vm.searchText = "a"
         vm.searchTextChanged()
         if case .idle = vm.state { } else {
@@ -47,7 +48,7 @@ struct SearchViewModelTests {
     @Test("Clearing text resets to idle and clears results")
     func clearTextResetsState() async {
         let result = SearchResult(anime: [makeAnime(id: 1)], currentPage: 1, hasNextPage: false)
-        let (vm, _, _) = makeViewModel(searchResult: result)
+        let (vm, _, _, _) = makeViewModel(searchResult: result)
 
         vm.searchText = ""
         vm.searchTextChanged()
@@ -61,7 +62,7 @@ struct SearchViewModelTests {
     @Test("displayedResults reflects favouriteIDs")
     func displayedResultsReflectsFavourites() async {
         let result = SearchResult(anime: [makeAnime(id: 1), makeAnime(id: 2)], currentPage: 1, hasNextPage: false)
-        let (vm, _, _) = makeViewModel(searchResult: result, favouriteIDs: [2])
+        let (vm, _, _, _) = makeViewModel(searchResult: result, favouriteIDs: [2])
 
         await vm.reloadFavouriteIDs()
         vm.results = [makeAnime(id: 1), makeAnime(id: 2)]
@@ -73,7 +74,7 @@ struct SearchViewModelTests {
 
     @Test("Toggle favourite adds to favouriteIDs")
     func toggleFavouriteAdds() async {
-        let (vm, _, _) = makeViewModel()
+        let (vm, _, _, _) = makeViewModel()
         let anime = makeAnime(id: 1, season: .winter, seasonYear: 2026)
         vm.results = [anime]
 
@@ -84,7 +85,7 @@ struct SearchViewModelTests {
 
     @Test("Toggle favourite removes from favouriteIDs")
     func toggleFavouriteRemoves() async {
-        let (vm, _, _) = makeViewModel(favouriteIDs: [1])
+        let (vm, _, _, _) = makeViewModel(favouriteIDs: [1])
         let anime = makeAnime(id: 1, season: .winter, seasonYear: 2026)
         vm.results = [anime]
         await vm.reloadFavouriteIDs()
@@ -96,7 +97,7 @@ struct SearchViewModelTests {
 
     @Test("Toggle favourite uses anime season/year")
     func toggleFavouriteUsesAnimeSeason() async {
-        let (vm, _, favouritesRepo) = makeViewModel()
+        let (vm, _, favouritesRepo, _) = makeViewModel()
         let anime = makeAnime(id: 1, season: .summer, seasonYear: 2025)
         vm.results = [anime]
 
@@ -111,7 +112,7 @@ struct SearchViewModelTests {
     func loadNextPageTriggersNearEnd() async {
         let anime = (1...10).map { makeAnime(id: $0) }
         let result = SearchResult(anime: anime, currentPage: 1, hasNextPage: true)
-        let (vm, animeRepo, _) = makeViewModel(searchResult: result)
+        let (vm, animeRepo, _, _) = makeViewModel(searchResult: result)
 
         // Simulate loaded state
         vm.results = anime
@@ -131,12 +132,46 @@ struct SearchViewModelTests {
     @Test("loadNextPageIfNeeded does NOT trigger when hasNextPage is false")
     func loadNextPageDoesNotTriggerWhenNoNextPage() {
         let anime = (1...10).map { makeAnime(id: $0) }
-        let (vm, _, _) = makeViewModel()
+        let (vm, _, _, _) = makeViewModel()
         vm.results = anime
 
         vm.loadNextPageIfNeeded(currentItem: anime[9])
 
         #expect(vm.isLoadingNextPage == false)
+    }
+
+    @Test("Offline blocks search and shows error")
+    func offlineBlocksSearch() {
+        let networkStatus = MockNetworkStatus()
+        networkStatus.isConnected = false
+        let (vm, _, _, _) = makeViewModel(networkStatus: networkStatus)
+
+        vm.searchText = "test query"
+        vm.searchTextChanged()
+
+        if case .error(let message) = vm.state {
+            #expect(message == "Search requires an internet connection")
+        } else {
+            Issue.record("Expected error state for offline search")
+        }
+    }
+
+    @Test("Offline retry shows error")
+    func offlineRetryShowsError() {
+        let networkStatus = MockNetworkStatus()
+        networkStatus.isConnected = false
+        let (vm, _, _, _) = makeViewModel(networkStatus: networkStatus)
+
+        vm.searchText = "test"
+        // Simulate a previous search
+        vm.searchTextChanged() // sets error
+        vm.retry()
+
+        if case .error(let message) = vm.state {
+            #expect(message == "Search requires an internet connection")
+        } else {
+            Issue.record("Expected error state for offline retry")
+        }
     }
 
     @Test("Error state on API failure")
@@ -152,7 +187,8 @@ struct SearchViewModelTests {
         let vm = SearchViewModel(
             searchUseCase: SearchAnimeUseCase(repository: animeRepo),
             toggleUseCase: ToggleFavouriteUseCase(repository: favouritesRepo),
-            scheduleNotificationUseCase: scheduleNotificationUseCase
+            scheduleNotificationUseCase: scheduleNotificationUseCase,
+            networkStatus: MockNetworkStatus()
         )
 
         vm.searchText = "test query"

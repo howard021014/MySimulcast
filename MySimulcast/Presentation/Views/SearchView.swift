@@ -9,7 +9,11 @@ struct SearchView: View {
             Group {
                 switch viewModel.state {
                 case .idle:
-                    placeholderView
+                    if viewModel.isOffline {
+                        offlinePlaceholderView
+                    } else {
+                        placeholderView
+                    }
                 case .loading:
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -41,6 +45,17 @@ struct SearchView: View {
                 )
             }
         }
+    }
+
+    private var offlinePlaceholderView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("Search requires an internet connection")
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var placeholderView: some View {

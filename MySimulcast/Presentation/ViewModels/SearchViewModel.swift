@@ -44,11 +44,15 @@ enum SearchState {
     private let searchUseCase: SearchAnimeUseCase
     private let toggleUseCase: ToggleFavouriteUseCase
     private let scheduleNotificationUseCase: ScheduleNotificationUseCase
+    private let networkStatus: NetworkStatusProviding
 
-    init(searchUseCase: SearchAnimeUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase) {
+    var isOffline: Bool { !networkStatus.isConnected }
+
+    init(searchUseCase: SearchAnimeUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase, networkStatus: NetworkStatusProviding) {
         self.searchUseCase = searchUseCase
         self.toggleUseCase = toggleUseCase
         self.scheduleNotificationUseCase = scheduleNotificationUseCase
+        self.networkStatus = networkStatus
     }
 
     func searchTextChanged() {
@@ -64,6 +68,11 @@ enum SearchState {
             return
         }
 
+        guard networkStatus.isConnected else {
+            state = .error("Search requires an internet connection")
+            return
+        }
+
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
@@ -72,7 +81,7 @@ enum SearchState {
     }
 
     func loadNextPageIfNeeded(currentItem: Anime) {
-        guard hasNextPage, !isLoadingNextPage else { return }
+        guard networkStatus.isConnected, hasNextPage, !isLoadingNextPage else { return }
         let thresholdIndex = results.index(results.endIndex, offsetBy: -5, limitedBy: results.startIndex) ?? results.startIndex
         guard let itemIndex = results.firstIndex(where: { $0.id == currentItem.id }),
               itemIndex >= thresholdIndex else { return }
@@ -85,6 +94,10 @@ enum SearchState {
 
     func retry() {
         guard !lastSearchedQuery.isEmpty else { return }
+        guard networkStatus.isConnected else {
+            state = .error("Search requires an internet connection")
+            return
+        }
         Task {
             await performSearch(query: lastSearchedQuery)
         }
