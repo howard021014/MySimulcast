@@ -8,9 +8,9 @@ final class MockFavouritesRepository: FavouritesRepositoryProtocol {
 
     func favouriteIDs() async throws -> Set<Int> { ids }
 
-    func addFavourite(anime: Anime, season: Season, year: Int) async throws {
+    func addFavourite(anime: Anime, season: Season?, year: Int?, sortOrder: Int) async throws {
         ids.insert(anime.id)
-        storedFavourites.append(FavouriteAnime(anime: anime, season: season, year: year, addedAt: Date()))
+        storedFavourites.append(FavouriteAnime(anime: anime, season: season, year: year, addedAt: Date(), sortOrder: sortOrder))
     }
 
     func removeFavourite(id: Int) async throws {
@@ -34,7 +34,7 @@ struct ToggleFavouriteUseCaseTests {
         let repo = MockFavouritesRepository()
         let useCase = ToggleFavouriteUseCase(repository: repo)
 
-        let result = try await useCase.execute(anime: testAnime, season: .winter, year: 2026, currentlyFavourited: false)
+        let result = try await useCase.execute(anime: testAnime, season: .winter, year: 2026, sortOrder: 0, currentlyFavourited: false)
 
         #expect(result == true)
         #expect(repo.ids.contains(1))
@@ -46,7 +46,7 @@ struct ToggleFavouriteUseCaseTests {
         repo.ids = [1]
         let useCase = ToggleFavouriteUseCase(repository: repo)
 
-        let result = try await useCase.execute(anime: testAnime, season: .winter, year: 2026, currentlyFavourited: true)
+        let result = try await useCase.execute(anime: testAnime, season: .winter, year: 2026, sortOrder: 0, currentlyFavourited: true)
 
         #expect(result == false)
         #expect(!repo.ids.contains(1))

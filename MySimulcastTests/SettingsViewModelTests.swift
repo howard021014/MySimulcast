@@ -33,7 +33,7 @@ struct SettingsViewModelTests {
                 airingSchedule: AiringSchedule(nextEpisode: 1, nextAiringAt: Date().addingTimeInterval(86400)),
                 season: currentSeason, seasonYear: currentYear, isFavourited: true
             ),
-            season: currentSeason, year: currentYear, addedAt: Date()
+            season: currentSeason, year: currentYear, addedAt: Date(), sortOrder: 0
         )
         let (sut, service) = makeSUT(status: .authorized, favourites: [fav])
 

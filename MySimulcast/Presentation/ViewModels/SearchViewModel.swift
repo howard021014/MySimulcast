@@ -108,21 +108,24 @@ enum SearchState {
     }
 
     func toggleFavourite(anime: Anime) async {
+        print("Toggle favourite in SearchViewModel: \(anime.title)")
         let isFavourited = favouriteIDs.contains(anime.id)
-        let season = anime.season ?? Season.current().0
-        let year = anime.seasonYear ?? Season.current().1
+        let sortOrder = results.firstIndex(where: { $0.id == anime.id }) ?? Int.max
 
         do {
             let newState = try await toggleUseCase.execute(
                 anime: anime,
-                season: season,
-                year: year,
+                season: anime.season,
+                year: anime.seasonYear,
+                sortOrder: sortOrder,
                 currentlyFavourited: isFavourited
             )
             if newState {
+                print("Adding anime to favourite")
                 favouriteIDs.insert(anime.id)
-                await handleFavourited(anime: anime, season: season, year: year)
+                await handleFavourited(anime: anime, season: anime.season, year: anime.seasonYear)
             } else {
+                print("Removing anime from favourite")
                 favouriteIDs.remove(anime.id)
                 await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
             }
@@ -134,9 +137,7 @@ enum SearchState {
         let granted = (try? await scheduleNotificationUseCase.requestAuthorization()) ?? false
         if granted {
             isNotificationsEnabled = true
-            let season = anime.season ?? Season.current().0
-            let year = anime.seasonYear ?? Season.current().1
-            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: season, year: year)
+            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: anime.season, year: anime.seasonYear)
         }
         pendingNotificationAnime = nil
         showNotificationPrompt = false
@@ -148,7 +149,7 @@ enum SearchState {
         showNotificationPrompt = false
     }
 
-    private func handleFavourited(anime: Anime, season: Season, year: Int) async {
+    private func handleFavourited(anime: Anime, season: Season?, year: Int?) async {
         let isSimulcasting = anime.airingSchedule != nil
         guard isSimulcasting else { return }
 

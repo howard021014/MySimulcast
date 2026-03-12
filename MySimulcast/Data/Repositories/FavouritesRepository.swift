@@ -8,8 +8,8 @@ actor FavouritesRepository: FavouritesRepositoryProtocol {
         return Set(entries.map(\.animeID))
     }
 
-    func addFavourite(anime: Anime, season: Season, year: Int) async throws {
-        modelContext.insert(FavouriteEntry(anime: anime, season: season, year: year))
+    func addFavourite(anime: Anime, season: Season?, year: Int?, sortOrder: Int) async throws {
+        modelContext.insert(FavouriteEntry(anime: anime, season: season, year: year, sortOrder: sortOrder))
         try modelContext.save()
     }
 
@@ -23,12 +23,12 @@ actor FavouritesRepository: FavouritesRepositoryProtocol {
 
     func allFavourites() async throws -> [FavouriteAnime] {
         var descriptor = FetchDescriptor<FavouriteEntry>(
-            sortBy: [SortDescriptor(\.addedAt, order: .reverse)]
+            sortBy: [SortDescriptor(\.sortOrder, order: .forward)]
         )
         descriptor.fetchLimit = 500
         let entries = try modelContext.fetch(descriptor)
-        return entries.compactMap { entry in
-            guard let season = Season(rawValue: entry.season) else { return nil }
+        return entries.map { entry in
+            let season: Season? = entry.season.flatMap { Season(rawValue: $0) }
             var airingSchedule: AiringSchedule?
             if let ep = entry.nextEpisode, let date = entry.nextAiringAt {
                 airingSchedule = AiringSchedule(nextEpisode: ep, nextAiringAt: date)
@@ -44,7 +44,7 @@ actor FavouritesRepository: FavouritesRepositoryProtocol {
                 seasonYear: entry.seasonYear,
                 isFavourited: true
             )
-            return FavouriteAnime(anime: anime, season: season, year: entry.seasonYear, addedAt: entry.addedAt)
+            return FavouriteAnime(anime: anime, season: season, year: entry.seasonYear, addedAt: entry.addedAt, sortOrder: entry.sortOrder)
         }
     }
 }

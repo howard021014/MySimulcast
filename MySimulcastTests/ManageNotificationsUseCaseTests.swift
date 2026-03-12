@@ -32,7 +32,7 @@ struct ManageNotificationsUseCaseTests {
                 airingSchedule: AiringSchedule(nextEpisode: 1, nextAiringAt: Date().addingTimeInterval(86400)),
                 season: currentSeason, seasonYear: currentYear, isFavourited: true
             ),
-            season: currentSeason, year: currentYear, addedAt: Date()
+            season: currentSeason, year: currentYear, addedAt: Date(), sortOrder: 0
         )
         let oldAnime = FavouriteAnime(
             anime: Anime(
@@ -40,7 +40,7 @@ struct ManageNotificationsUseCaseTests {
                 description: nil, airingSchedule: nil,
                 season: .summer, seasonYear: 2024, isFavourited: true
             ),
-            season: .summer, year: 2024, addedAt: Date()
+            season: .summer, year: 2024, addedAt: Date(), sortOrder: 1
         )
         let (sut, service, _) = makeSUT(favourites: [simulcasting, oldAnime])
 
@@ -70,7 +70,7 @@ struct ManageNotificationsUseCaseTests {
                 airingSchedule: AiringSchedule(nextEpisode: 5, nextAiringAt: Date().addingTimeInterval(86400)),
                 season: currentSeason, seasonYear: currentYear, isFavourited: true
             ),
-            season: currentSeason, year: currentYear, addedAt: Date()
+            season: currentSeason, year: currentYear, addedAt: Date(), sortOrder: 0
         )
         let (sut, service, _) = makeSUT(favourites: [fav])
 

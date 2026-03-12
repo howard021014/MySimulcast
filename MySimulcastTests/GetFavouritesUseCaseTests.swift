@@ -21,7 +21,7 @@ struct GetFavouritesUseCaseTests {
         let anime = Anime(id: 42, title: "My Anime", coverImageURL: nil, thumbnailImageURL: nil,
                           description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: true)
         repo.storedFavourites = [
-            FavouriteAnime(anime: anime, season: .winter, year: 2026, addedAt: Date())
+            FavouriteAnime(anime: anime, season: .winter, year: 2026, addedAt: Date(), sortOrder: 0)
         ]
         let useCase = GetFavouritesUseCase(repository: repo)
 

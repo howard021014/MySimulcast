@@ -7,41 +7,37 @@ struct FavouritesView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if viewModel.showDeniedBanner {
-                        deniedBanner
-                    }
-
-                    if viewModel.availableFilters.count > 1 {
-                        filterPillsRow
-                    }
-
-                    switch viewModel.state {
-                    case .idle:
-                        EmptyView()
-                    case .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 200)
-                    case .loaded:
-                        if viewModel.displayedAnime.isEmpty {
-                            emptyState
-                        } else {
-                            animeGrid
-                        }
-                    case .error(let message):
-                        Text(message)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, minHeight: 200)
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                if viewModel.showDeniedBanner {
+                    deniedBanner
+                        .padding(.horizontal)
                 }
-                .padding(.horizontal)
+
+                if viewModel.availableFilters.count > 1 {
+                    filterPillsRow
+                }
+
+                switch viewModel.state {
+                case .idle:
+                    EmptyView()
+                case .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                case .loaded:
+                    pagedContent
+                case .error(let message):
+                    Text(message)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                }
             }
             .navigationTitle("Favourites")
-            .task {
-                await viewModel.load()
-                await viewModel.checkDeniedStatus()
+            .onAppear {
+                Task {
+                    await viewModel.load()
+                    await viewModel.checkDeniedStatus()
+                }
             }
         }
     }
@@ -68,25 +64,55 @@ struct FavouritesView: View {
     }
 
     private var filterPillsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                ForEach(viewModel.availableFilters, id: \.self) { filter in
-                    FilterPillView(
-                        label: filter.label,
-                        isSelected: viewModel.selectedFilter == filter
-                    ) {
-                        viewModel.selectedFilter = filter
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack {
+                    ForEach(viewModel.availableFilters, id: \.self) { filter in
+                        FilterPillView(
+                            label: filter.label,
+                            isSelected: viewModel.selectedFilter == filter
+                        ) {
+                            viewModel.selectedFilter = filter
+                        }
+                        .id(filter)
                     }
+                }
+                .padding(.horizontal)
+            }
+            .onChange(of: viewModel.selectedFilter) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue, anchor: .center)
                 }
             }
         }
     }
 
-    private var animeGrid: some View {
-        LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(viewModel.displayedAnime) { item in
-                AnimeCardView(anime: item.anime, scheduleText: item.scheduleText) {
-                    Task { await viewModel.toggleFavourite(anime: item.anime) }
+    private var pagedContent: some View {
+        @Bindable var vm = viewModel
+        return TabView(selection: $vm.selectedFilter) {
+            ForEach(viewModel.availableFilters, id: \.self) { filter in
+                pageForFilter(filter)
+                    .tag(filter)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+    }
+
+    private func pageForFilter(_ filter: FavouriteFilter) -> some View {
+        let items = viewModel.displayedAnime(for: filter)
+        return Group {
+            if items.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(items) { item in
+                            AnimeCardView(anime: item.anime, scheduleText: item.scheduleText) {
+                                Task { await viewModel.toggleFavourite(anime: item.anime) }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
             }
         }

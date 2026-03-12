@@ -6,12 +6,12 @@ struct ToggleFavouriteUseCase {
     }
 
     /// Toggles the favourite state. Returns the new `isFavourited` value.
-    func execute(anime: Anime, season: Season, year: Int, currentlyFavourited: Bool) async throws -> Bool {
+    func execute(anime: Anime, season: Season?, year: Int?, sortOrder: Int, currentlyFavourited: Bool) async throws -> Bool {
         if currentlyFavourited {
             try await repository.removeFavourite(id: anime.id)
             return false
         } else {
-            try await repository.addFavourite(anime: anime, season: season, year: year)
+            try await repository.addFavourite(anime: anime, season: season, year: year, sortOrder: sortOrder)
             return true
         }
     }

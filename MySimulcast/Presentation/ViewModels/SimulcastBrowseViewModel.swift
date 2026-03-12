@@ -91,11 +91,13 @@ enum BrowseState {
     }
 
     func toggleFavourite(anime: Anime) async {
+        let sortOrder = self.anime.firstIndex(where: { $0.id == anime.id }) ?? Int.max
         do {
             let newState = try await toggleUseCase.execute(
                 anime: anime,
                 season: currentSeason,
                 year: currentYear,
+                sortOrder: sortOrder,
                 currentlyFavourited: favouriteIDs.contains(anime.id)
             )
             if newState {

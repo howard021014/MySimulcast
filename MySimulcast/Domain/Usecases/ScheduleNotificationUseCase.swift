@@ -9,9 +9,9 @@ struct ScheduleNotificationUseCase {
         self.isNotificationsEnabled = isNotificationsEnabled
     }
 
-    func scheduleForAnime(anime: Anime, season: Season, year: Int) async {
+    func scheduleForAnime(anime: Anime, season: Season?, year: Int?) async {
         let (currentSeason, currentYear) = Season.current()
-        guard season == currentSeason && year == currentYear else { return }
+        guard let season, let year, season == currentSeason && year == currentYear else { return }
         guard let schedule = anime.airingSchedule else { return }
         guard isNotificationsEnabled() else { return }
 
