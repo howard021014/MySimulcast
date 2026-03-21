@@ -8,46 +8,18 @@ struct SimulcastBrowseView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    seasonPillsRow
+            VStack(spacing: 16) {
+                seasonPillsRow
 
-                    if viewModel.isShowingCacheBanner {
-                        Label("Content may be outdated", systemImage: "wifi.slash")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-                    }
-
-                    switch viewModel.browseState {
-                    case .idle:
-                        EmptyView()
-                    case .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 200)
-                    case .loaded:
-                        animeGrid
-                    case .error(let message):
-                        errorView(message: message)
-                    }
-
-                    if let fetchedAt = viewModel.fetchedAt {
-                        Text("Updated \(fetchedAt.formatted(date: .abbreviated, time: .shortened))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding(.horizontal)
+                pagedContent
             }
             .navigationTitle("Simulcast")
-            .task {
-                await viewModel.loadSeason()
+            .onAppear {
+                Task { await viewModel.refreshFavouriteIDs() }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
+                    viewModel.refreshSeasonListIfNeeded()
                     Task { await viewModel.checkStaleAndRefresh() }
                 }
             }
@@ -64,14 +36,77 @@ struct SimulcastBrowseView: View {
     }
 
     private var seasonPillsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                SeasonPillView(
-                    season: viewModel.currentSeason,
-                    year: viewModel.currentYear,
-                    isSelected: true
-                )
+        @Bindable var vm = viewModel
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack {
+                    ForEach(vm.seasons) { season in
+                        FilterPillView(
+                            label: season.label,
+                            isSelected: vm.selectedSeason == season
+                        ) {
+                            vm.selectedSeason = season
+                        }
+                        .id(season)
+                    }
+                }
+                .padding(.horizontal)
             }
+            .onChange(of: vm.selectedSeason) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+    }
+
+    private var pagedContent: some View {
+        @Bindable var vm = viewModel
+        return TabView(selection: $vm.selectedSeason) {
+            ForEach(vm.seasons) { season in
+                seasonPage(for: season)
+                    .tag(season)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+    }
+
+    private func seasonPage(for season: SeasonIdentifier) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                if viewModel.isShowingCacheBanner(for: season) {
+                    Label("Content may be outdated", systemImage: "wifi.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                }
+
+                switch viewModel.stateForSeason(season) {
+                case .idle:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                case .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                case .loaded:
+                    animeGrid(for: season)
+                case .error(let message):
+                    errorView(message: message, season: season)
+                }
+
+                if let fetchedAt = viewModel.fetchedAt(for: season) {
+                    Text("Updated \(fetchedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.horizontal)
+        }
+        .task {
+            await viewModel.loadSeason(season)
         }
     }
 
@@ -81,13 +116,11 @@ struct SimulcastBrowseView: View {
         return f
     }()
 
-    private var animeGrid: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(viewModel.anime) { anime in
-                    AnimeCardView(anime: anime, scheduleText: scheduleText(for: anime)) {
-                        Task { await viewModel.toggleFavourite(anime: anime) }
-                    }
+    private func animeGrid(for season: SeasonIdentifier) -> some View {
+        LazyVGrid(columns: columns, spacing: 16) {
+            ForEach(viewModel.anime(for: season)) { anime in
+                AnimeCardView(anime: anime, scheduleText: scheduleText(for: anime)) {
+                    Task { await viewModel.toggleFavourite(anime: anime) }
                 }
             }
         }
@@ -98,7 +131,7 @@ struct SimulcastBrowseView: View {
         return "Ep \(schedule.nextEpisode) · \(Self.dateFormatter.string(from: schedule.nextAiringAt))"
     }
 
-    private func errorView(message: String) -> some View {
+    private func errorView(message: String, season: SeasonIdentifier) -> some View {
         VStack(spacing: 12) {
             Text(message)
                 .multilineTextAlignment(.center)
@@ -106,32 +139,11 @@ struct SimulcastBrowseView: View {
 
             Button("Try Again") {
                 Task {
-                    await viewModel.retryLoadSeason()
+                    await viewModel.retryLoadSeason(season)
                 }
             }
             .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
-    }
-}
-
-private struct SeasonPillView: View {
-    let season: Season
-    let year: Int
-    let isSelected: Bool
-
-    private var label: String {
-        "\(season.rawValue.capitalized) \(year)"
-    }
-
-    var body: some View {
-        Text(label)
-            .font(.subheadline)
-            .fontWeight(isSelected ? .semibold : .regular)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.accentColor : Color(.systemGray5))
-            .foregroundStyle(isSelected ? .white : .primary)
-            .clipShape(Capsule())
     }
 }

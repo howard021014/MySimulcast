@@ -110,8 +110,8 @@ struct FetchSimulcastSeasonUseCaseTests {
     }
 }
 
-@Suite("SimulcastBrowseViewModel")
-struct SimulcastBrowseViewModelTests {
+@Suite("SimulcastBrowseViewModel — legacy")
+struct SimulcastBrowseViewModelLegacyTests {
 
     private func makeViewModel(useCase: FetchSimulcastSeasonUseCase, toggleUseCase: ToggleFavouriteUseCase, networkStatus: MockNetworkStatus = MockNetworkStatus()) -> SimulcastBrowseViewModel {
         let service = MockNotificationService()
@@ -121,7 +121,7 @@ struct SimulcastBrowseViewModelTests {
         return SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleUseCase, manageNotificationsUseCase: manageUseCase, networkStatus: networkStatus)
     }
 
-    @Test("Starts idle")
+    @Test("Starts with all seasons idle")
     func startsIdle() {
         let repo = MockAnimeRepository()
         let cache = MockSeasonCacheRepository()
@@ -129,7 +129,8 @@ struct SimulcastBrowseViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
-        if case .idle = viewModel.browseState { } else {
+        let state = viewModel.stateForSeason(viewModel.selectedSeason)
+        if case .idle = state { } else {
             Issue.record("Expected idle state")
         }
     }
@@ -146,9 +147,10 @@ struct SimulcastBrowseViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
 
-        if case .loaded(let result) = viewModel.browseState {
+        if case .loaded(let result) = viewModel.stateForSeason(target) {
             #expect(result.anime.count == 1)
         } else {
             Issue.record("Expected loaded state")
@@ -167,30 +169,33 @@ struct SimulcastBrowseViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
 
-        if case .error(let message) = viewModel.browseState {
+        if case .error(let message) = viewModel.stateForSeason(target) {
             #expect(message == "Network failed")
         } else {
             Issue.record("Expected error state")
         }
     }
 
-    @Test("Shows cache banner when result is from cache")
+    @Test("Shows cache banner when data is stale")
     func showsCacheBanner() async {
         struct TestError: Error {}
         let repo = MockAnimeRepository()
         repo.result = .failure(TestError())
         let cache = MockSeasonCacheRepository()
-        let cachedSeason = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: Date())
+        let staleDate = Calendar.current.date(byAdding: .day, value: -5, to: Date())!
+        let cachedSeason = SimulcastSeason(season: .winter, year: 2026, anime: [], fetchedAt: staleDate)
         await cache.cacheSeason(cachedSeason)
         let useCase = FetchSimulcastSeasonUseCase(repository: repo, cacheRepository: cache)
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
 
-        #expect(viewModel.isShowingCacheBanner == true)
+        #expect(viewModel.isShowingCacheBanner(for: target) == true)
     }
 
     @Test("Cache banner hidden on fresh network data")
@@ -203,8 +208,9 @@ struct SimulcastBrowseViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: MockFavouritesRepository())
         let viewModel = makeViewModel(useCase: useCase, toggleUseCase: toggleUseCase)
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
 
-        #expect(viewModel.isShowingCacheBanner == false)
+        #expect(viewModel.isShowingCacheBanner(for: target) == false)
     }
 }

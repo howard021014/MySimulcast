@@ -21,4 +21,31 @@ enum Season: String, Codable, CaseIterable {
 
         return (season, year)
     }
+
+    func previous(year: Int) -> (Season, Int) {
+        switch self {
+        case .winter: return (.fall, year - 1)
+        case .spring: return (.winter, year)
+        case .summer: return (.spring, year)
+        case .fall: return (.summer, year)
+        }
+    }
+}
+
+struct SeasonIdentifier: Hashable, Identifiable, Codable {
+    let season: Season
+    let year: Int
+
+    var id: String { "\(season.rawValue)-\(year)" }
+    var label: String { "\(season.rawValue.capitalized) \(year)" }
+
+    static func list(from date: Date = Date(), count: Int = 4) -> [SeasonIdentifier] {
+        var (season, year) = Season.current(for: date)
+        var result: [SeasonIdentifier] = []
+        for _ in 0..<count {
+            result.append(SeasonIdentifier(season: season, year: year))
+            (season, year) = season.previous(year: year)
+        }
+        return result
+    }
 }

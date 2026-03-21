@@ -100,9 +100,10 @@ struct SimulcastBrowseViewModelFavouritesTests {
         ]
         let viewModel = makeViewModel(anime: anime, favouriteIDs: [2])
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
 
-        let loaded = viewModel.anime
+        let loaded = viewModel.anime(for: target)
         #expect(loaded.first(where: { $0.id == 1 })?.isFavourited == false)
         #expect(loaded.first(where: { $0.id == 2 })?.isFavourited == true)
     }
@@ -113,10 +114,11 @@ struct SimulcastBrowseViewModelFavouritesTests {
                           description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)
         let viewModel = makeViewModel(anime: [anime])
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
         await viewModel.toggleFavourite(anime: anime)
 
-        #expect(viewModel.anime.first?.isFavourited == true)
+        #expect(viewModel.anime(for: target).first?.isFavourited == true)
     }
 
     @Test("Toggle favourite removes from favourites")
@@ -125,9 +127,10 @@ struct SimulcastBrowseViewModelFavouritesTests {
                           description: nil, airingSchedule: nil, season: nil, seasonYear: nil, isFavourited: false)
         let viewModel = makeViewModel(anime: [anime], favouriteIDs: [1])
 
-        await viewModel.loadSeason()
+        let target = viewModel.selectedSeason
+        await viewModel.loadSeason(target)
         await viewModel.toggleFavourite(anime: anime)
 
-        #expect(viewModel.anime.first?.isFavourited == false)
+        #expect(viewModel.anime(for: target).first?.isFavourited == false)
     }
 }
