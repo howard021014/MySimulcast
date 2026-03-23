@@ -134,10 +134,8 @@ As a user, I want cards to feel responsive and let me quickly read a show's desc
 
 *Acceptance Criteria:*
 - **Press feedback:** touching down on a card scales it to 0.96 with a spring animation; releases back to 1.0 on lift — gives immediate tactile acknowledgment
-- **Flip:** tap triggers a `rotation3DEffect` flip on the Y axis revealing the card's back face; front face exits before back face enters (0.35s staggered delay) to avoid see-through artifact
-- **Back face content:** show title + max 3 lines of description truncated with ellipsis + a "Details" chevron
-- **Flip back:** tapping the flipped card again flips it back to the front face
-- **Details sheet:** tapping the "Details" chevron opens a system `sheet` (bottom drawer) with full description (scrollable), airing schedule, and favourite toggle; dismissable by swipe down
+- ~~**Flip:** tap triggers a `rotation3DEffect` flip on the Y axis~~ *(Removed in V2 — replaced by direct detail sheet)*
+- **Tap to detail:** tapping a card opens a system `sheet` (bottom drawer) with full description (scrollable), airing schedule, and favourite toggle; dismissable by swipe down
 - **Loading state:** while images are loading, cards display an animated shimmer placeholder (LinearGradient sweeping left to right) — no blank/grey boxes
 - **Appear animation:** on grid first load, cards animate in with a spring stagger, each card offset by its index (subtle upward slide) *(V1 polish)*
 - All touch targets minimum 44×44pt per HIG
@@ -331,6 +329,10 @@ query SearchAnime($query: String, $page: Int) {
 | US-08: Shimmer loading state | LinearGradient sweep animation placeholder while images load | Done |
 | US-08: Detail sheet | Bottom sheet with full description, airing schedule, favourite toggle | Done |
 | US-08: Appear animation (stagger) | Cards animate in with spring stagger on grid first load | Not Done |
+| **Feature 7 — UI Polish** | | |
+| US-09: Remove card flip animation | Remove Y-axis flip interaction; tapping a card opens the detail sheet directly | Not Done |
+| US-10: Improve detail sheet UI | Polish the detail sheet layout, typography, spacing, and visual hierarchy | Not Done |
+| US-11: Overall UI polish | Refine colors, spacing, typography, and visual consistency across all screens | Not Done |
 | **Technical / Infrastructure** | | |
 | AniList GraphQL client (Apollo iOS) | Apollo codegen, type-safe queries, pagination | Done |
 | Custom image cache (NSCache + URLSession) | Memory cache with 200 image / 50MB limit | Done |
@@ -368,6 +370,9 @@ query SearchAnime($query: String, $page: Int) {
 - [x] Image disk persistence (FileManager)
 - [ ] Intelligent prefetching in search
 - [ ] Appear animation (spring stagger on grid load)
+- [ ] Remove card flip animation (tap card → open detail sheet directly)
+- [ ] Improve detail sheet UI (layout, typography, visual hierarchy)
+- [ ] Overall UI polish (colors, spacing, typography, consistency)
 
 ---
 
