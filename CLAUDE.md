@@ -292,6 +292,10 @@ Relaxed rules focusing on critical issues:
 
 See `.swiftlint.yml` for full configuration.
 
+## Feature Tracking
+
+After each commit, review the **Feature / Task List** table in `anime-app-prd.md` and update the **Status** column to reflect any features that were completed or changed by the commit. Also update the corresponding **Build Roadmap** checkboxes to stay in sync.
+
 ## Critical Reminders
 
 1. Domain layer must remain pure Swift (no frameworks)
