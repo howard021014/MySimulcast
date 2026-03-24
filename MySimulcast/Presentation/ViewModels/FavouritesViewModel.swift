@@ -32,13 +32,11 @@ enum FavouriteFilter: Hashable {
     var selectedFilter: FavouriteFilter = .all {
         didSet { recomputeDisplayedAnime() }
     }
-    var showDeniedBanner = false
     private(set) var availableFilters: [FavouriteFilter] = [.all]
     private(set) var displayedAnime: [FavouriteDisplayItem] = []
 
     private let getUseCase: GetFavouritesUseCase
-    private let toggleUseCase: ToggleFavouriteUseCase
-    private let scheduleNotificationUseCase: ScheduleNotificationUseCase
+    let favouriteManager: FavouriteManager
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -46,10 +44,9 @@ enum FavouriteFilter: Hashable {
         return f
     }()
 
-    init(getUseCase: GetFavouritesUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase) {
+    init(getUseCase: GetFavouritesUseCase, favouriteManager: FavouriteManager) {
         self.getUseCase = getUseCase
-        self.toggleUseCase = toggleUseCase
-        self.scheduleNotificationUseCase = scheduleNotificationUseCase
+        self.favouriteManager = favouriteManager
     }
 
     private func recomputeDerivedState() {
@@ -132,26 +129,16 @@ enum FavouriteFilter: Hashable {
         guard case .loaded(let items) = state else { return }
         guard let entry = items.first(where: { $0.anime.id == anime.id }) else { return }
 
+        // Optimistic removal from UI
         let updated = items.filter { $0.anime.id != anime.id }
         state = .loaded(updated)
 
-        do {
-            _ = try await toggleUseCase.execute(
-                anime: anime,
-                season: entry.season,
-                year: entry.year,
-                sortOrder: entry.sortOrder,
-                currentlyFavourited: true
-            )
-            await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
-        } catch {
-            state = .loaded(items)
-        }
-    }
-
-    func checkDeniedStatus() async {
-        let status = await scheduleNotificationUseCase.authorizationStatus()
-        showDeniedBanner = (status == .denied)
+        await favouriteManager.toggleFavourite(
+            anime: anime,
+            season: entry.season,
+            year: entry.year,
+            sortOrder: entry.sortOrder
+        )
     }
 
     private func scheduleText(for item: FavouriteAnime, currentSeason: Season, currentYear: Int) -> String {

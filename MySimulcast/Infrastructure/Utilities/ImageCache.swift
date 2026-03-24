@@ -34,6 +34,37 @@ import CryptoKit
         return image
     }
 
+    // MARK: - Favourite Image Storage
+
+    func storeFavouriteImages(urls: [URL]) async {
+        let fm = FileManager.default
+        try? fm.createDirectory(at: favouriteImageURL, withIntermediateDirectories: true)
+
+        for url in urls {
+            let dest = favouritePath(for: url)
+            guard !fm.fileExists(atPath: dest.path(percentEncoded: false)) else { continue }
+
+            // Try copying from cache dir first
+            let cachePath = diskPath(for: url)
+            if fm.fileExists(atPath: cachePath.path(percentEncoded: false)) {
+                try? fm.copyItem(at: cachePath, to: dest)
+                continue
+            }
+
+            // Not in cache — download and save to both locations
+            guard let (data, _) = try? await URLSession.shared.data(from: url) else { continue }
+            try? data.write(to: dest)
+            Task.detached { [self] in self.saveToDisk(data, for: url) }
+        }
+    }
+
+    func removeFavouriteImages(urls: [URL]) {
+        let fm = FileManager.default
+        for url in urls {
+            try? fm.removeItem(at: favouritePath(for: url))
+        }
+    }
+
     // MARK: - Disk Cache
 
     private var diskCacheURL: URL {
@@ -41,13 +72,29 @@ import CryptoKit
         return caches.appending(path: "ImageCache", directoryHint: .isDirectory)
     }
 
-    private func diskPath(for url: URL) -> URL {
+    private var favouriteImageURL: URL {
+        let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        return library.appending(path: "FavouriteImages", directoryHint: .isDirectory)
+    }
+
+    private func hashString(for url: URL) -> String {
         let hash = SHA256.hash(data: Data(url.absoluteString.utf8))
-        let name = hash.map { String(format: "%02x", $0) }.joined()
-        return diskCacheURL.appending(path: name)
+        return hash.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func diskPath(for url: URL) -> URL {
+        diskCacheURL.appending(path: hashString(for: url))
+    }
+
+    private func favouritePath(for url: URL) -> URL {
+        favouriteImageURL.appending(path: hashString(for: url))
     }
 
     private func loadFromDisk(for url: URL) -> UIImage? {
+        // Check favourites directory first (permanent), then cache
+        if let data = try? Data(contentsOf: favouritePath(for: url)) {
+            return UIImage(data: data)
+        }
         guard let data = try? Data(contentsOf: diskPath(for: url)) else { return nil }
         return UIImage(data: data)
     }

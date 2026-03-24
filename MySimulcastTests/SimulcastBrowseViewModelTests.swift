@@ -31,13 +31,17 @@ struct SimulcastBrowseViewModelTests {
             favouritesRepository: favRepo,
             notificationService: notifService
         )
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleUseCase,
+            imageCache: ImageCache()
+        )
 
         let vm = SimulcastBrowseViewModel(
             useCase: fetchUseCase,
-            toggleUseCase: toggleUseCase,
-            scheduleNotificationUseCase: scheduleUseCase,
             manageNotificationsUseCase: manageUseCase,
-            networkStatus: networkStatus
+            networkStatus: networkStatus,
+            favouriteManager: favouriteManager
         )
         return (vm, repo)
     }

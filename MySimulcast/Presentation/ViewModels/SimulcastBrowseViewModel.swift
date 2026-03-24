@@ -12,41 +12,24 @@ enum BrowseState {
     var seasons: [SeasonIdentifier]
     var selectedSeason: SeasonIdentifier
     var seasonStates: [SeasonIdentifier: BrowseState] = [:]
-    var showNotificationPrompt = false
-    var showDeniedBanner = false
 
-    private var favouriteIDs: Set<Int> = []
-    private var pendingNotificationAnime: Anime?
     private var retrySchedulers: [SeasonIdentifier: RetryScheduler] = [:]
 
-    private var notificationPromptDismissCount: Int {
-        get { UserDefaults.standard.integer(forKey: "notificationPromptDismissCount") }
-        set { UserDefaults.standard.set(newValue, forKey: "notificationPromptDismissCount") }
-    }
-
-    private var isNotificationsEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "notificationsEnabled") }
-        set { UserDefaults.standard.set(newValue, forKey: "notificationsEnabled") }
-    }
-
     private let useCase: FetchSimulcastSeasonUseCase
-    private let toggleUseCase: ToggleFavouriteUseCase
-    private let scheduleNotificationUseCase: ScheduleNotificationUseCase
     private let manageNotificationsUseCase: ManageNotificationsUseCase
     private let networkStatus: NetworkStatusProviding
+    let favouriteManager: FavouriteManager
 
     init(
         useCase: FetchSimulcastSeasonUseCase,
-        toggleUseCase: ToggleFavouriteUseCase,
-        scheduleNotificationUseCase: ScheduleNotificationUseCase,
         manageNotificationsUseCase: ManageNotificationsUseCase,
-        networkStatus: NetworkStatusProviding
+        networkStatus: NetworkStatusProviding,
+        favouriteManager: FavouriteManager
     ) {
         self.useCase = useCase
-        self.toggleUseCase = toggleUseCase
-        self.scheduleNotificationUseCase = scheduleNotificationUseCase
         self.manageNotificationsUseCase = manageNotificationsUseCase
         self.networkStatus = networkStatus
+        self.favouriteManager = favouriteManager
         let (season, year) = Season.current()
         let current = SeasonIdentifier(season: season, year: year)
         let persisted = Self.loadPersistedSeasons()
@@ -72,7 +55,7 @@ enum BrowseState {
         guard case .loaded(let simulcastSeason) = seasonStates[id] else { return [] }
         return simulcastSeason.anime.map { anime in
             var copy = anime
-            copy.isFavourited = favouriteIDs.contains(anime.id)
+            copy.isFavourited = favouriteManager.isFavourited(id: anime.id)
             return copy
         }
     }
@@ -95,9 +78,8 @@ enum BrowseState {
         seasonStates[id] = .loading
         do {
             async let fetchResult = useCase.execute(season: id.season, year: id.year)
-            async let ids = toggleUseCase.loadFavouriteIDs()
-            let (result, loadedIDs) = try await (fetchResult, ids)
-            favouriteIDs = loadedIDs
+            async let _ = favouriteManager.loadFavouriteIDs()
+            let result = try await fetchResult
             seasonStates[id] = .loaded(result.season)
             if !result.isFromCache {
                 retrySchedulers[id] = nil
@@ -105,10 +87,6 @@ enum BrowseState {
         } catch {
             seasonStates[id] = .error(error.localizedDescription)
         }
-    }
-
-    func refreshFavouriteIDs() async {
-        favouriteIDs = (try? await toggleUseCase.loadFavouriteIDs()) ?? favouriteIDs
     }
 
     func retryLoadSeason(_ id: SeasonIdentifier) async {
@@ -123,41 +101,12 @@ enum BrowseState {
     func toggleFavourite(anime: Anime) async {
         let currentAnime = self.anime(for: selectedSeason)
         let sortOrder = currentAnime.firstIndex(where: { $0.id == anime.id }) ?? Int.max
-        do {
-            let newState = try await toggleUseCase.execute(
-                anime: anime,
-                season: selectedSeason.season,
-                year: selectedSeason.year,
-                sortOrder: sortOrder,
-                currentlyFavourited: favouriteIDs.contains(anime.id)
-            )
-            if newState {
-                favouriteIDs.insert(anime.id)
-                await handleFavourited(anime: anime)
-            } else {
-                favouriteIDs.remove(anime.id)
-                await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
-            }
-        } catch {}
-    }
-
-    func onNotificationPromptEnable() async {
-        guard let anime = pendingNotificationAnime else { return }
-        let granted = (try? await scheduleNotificationUseCase.requestAuthorization()) ?? false
-        if granted {
-            isNotificationsEnabled = true
-            await scheduleNotificationUseCase.scheduleForAnime(
-                anime: anime, season: selectedSeason.season, year: selectedSeason.year
-            )
-        }
-        pendingNotificationAnime = nil
-        showNotificationPrompt = false
-    }
-
-    func onNotificationPromptDismiss() {
-        notificationPromptDismissCount += 1
-        pendingNotificationAnime = nil
-        showNotificationPrompt = false
+        await favouriteManager.toggleFavourite(
+            anime: anime,
+            season: selectedSeason.season,
+            year: selectedSeason.year,
+            sortOrder: sortOrder
+        )
     }
 
     func checkStaleAndRefresh() async {
@@ -166,6 +115,7 @@ enum BrowseState {
         guard fetchedAt < fourDaysAgo else { return }
         seasonStates[selectedSeason] = nil
         await loadSeason(selectedSeason)
+        let isNotificationsEnabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")
         if isNotificationsEnabled {
             let currentAnime = anime(for: selectedSeason)
             await manageNotificationsUseCase.reSyncIfNeeded(
@@ -196,26 +146,5 @@ enum BrowseState {
     private static func loadPersistedSeasons() -> [SeasonIdentifier]? {
         guard let data = UserDefaults.standard.data(forKey: seasonsKey) else { return nil }
         return try? JSONDecoder().decode([SeasonIdentifier].self, from: data)
-    }
-
-    private func handleFavourited(anime: Anime) async {
-        let isSimulcasting = anime.airingSchedule != nil
-        guard isSimulcasting else { return }
-
-        let status = await scheduleNotificationUseCase.authorizationStatus()
-        switch status {
-        case .notDetermined:
-            if notificationPromptDismissCount < 2 {
-                pendingNotificationAnime = anime
-                showNotificationPrompt = true
-            }
-        case .authorized, .provisional:
-            isNotificationsEnabled = true
-            await scheduleNotificationUseCase.scheduleForAnime(
-                anime: anime, season: selectedSeason.season, year: selectedSeason.year
-            )
-        case .denied:
-            showDeniedBanner = true
-        }
     }
 }

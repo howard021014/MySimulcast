@@ -13,46 +13,30 @@ enum SearchState {
     var state: SearchState = .idle
     var results: [Anime] = []
     var isLoadingNextPage = false
-    var showNotificationPrompt = false
-    var showDeniedBanner = false
 
     var displayedResults: [Anime] {
         results.map { anime in
             var copy = anime
-            copy.isFavourited = favouriteIDs.contains(anime.id)
+            copy.isFavourited = favouriteManager.isFavourited(id: anime.id)
             return copy
         }
     }
 
-    private var favouriteIDs: Set<Int> = []
     private var currentPage = 1
     private var hasNextPage = false
     private var lastSearchedQuery = ""
     private var searchTask: Task<Void, Never>?
-    private var pendingNotificationAnime: Anime?
-
-    private var notificationPromptDismissCount: Int {
-        get { UserDefaults.standard.integer(forKey: "notificationPromptDismissCount") }
-        set { UserDefaults.standard.set(newValue, forKey: "notificationPromptDismissCount") }
-    }
-
-    private var isNotificationsEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "notificationsEnabled") }
-        set { UserDefaults.standard.set(newValue, forKey: "notificationsEnabled") }
-    }
 
     private let searchUseCase: SearchAnimeUseCase
-    private let toggleUseCase: ToggleFavouriteUseCase
-    private let scheduleNotificationUseCase: ScheduleNotificationUseCase
     private let networkStatus: NetworkStatusProviding
+    let favouriteManager: FavouriteManager
 
     var isOffline: Bool { !networkStatus.isConnected }
 
-    init(searchUseCase: SearchAnimeUseCase, toggleUseCase: ToggleFavouriteUseCase, scheduleNotificationUseCase: ScheduleNotificationUseCase, networkStatus: NetworkStatusProviding) {
+    init(searchUseCase: SearchAnimeUseCase, networkStatus: NetworkStatusProviding, favouriteManager: FavouriteManager) {
         self.searchUseCase = searchUseCase
-        self.toggleUseCase = toggleUseCase
-        self.scheduleNotificationUseCase = scheduleNotificationUseCase
         self.networkStatus = networkStatus
+        self.favouriteManager = favouriteManager
     }
 
     func searchTextChanged() {
@@ -103,69 +87,14 @@ enum SearchState {
         }
     }
 
-    func reloadFavouriteIDs() async {
-        favouriteIDs = (try? await toggleUseCase.loadFavouriteIDs()) ?? []
-    }
-
     func toggleFavourite(anime: Anime) async {
-        print("Toggle favourite in SearchViewModel: \(anime.title)")
-        let isFavourited = favouriteIDs.contains(anime.id)
         let sortOrder = results.firstIndex(where: { $0.id == anime.id }) ?? Int.max
-
-        do {
-            let newState = try await toggleUseCase.execute(
-                anime: anime,
-                season: anime.season,
-                year: anime.seasonYear,
-                sortOrder: sortOrder,
-                currentlyFavourited: isFavourited
-            )
-            if newState {
-                print("Adding anime to favourite")
-                favouriteIDs.insert(anime.id)
-                await handleFavourited(anime: anime, season: anime.season, year: anime.seasonYear)
-            } else {
-                print("Removing anime from favourite")
-                favouriteIDs.remove(anime.id)
-                await scheduleNotificationUseCase.cancelForAnime(id: anime.id)
-            }
-        } catch {}
-    }
-
-    func onNotificationPromptEnable() async {
-        guard let anime = pendingNotificationAnime else { return }
-        let granted = (try? await scheduleNotificationUseCase.requestAuthorization()) ?? false
-        if granted {
-            isNotificationsEnabled = true
-            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: anime.season, year: anime.seasonYear)
-        }
-        pendingNotificationAnime = nil
-        showNotificationPrompt = false
-    }
-
-    func onNotificationPromptDismiss() {
-        notificationPromptDismissCount += 1
-        pendingNotificationAnime = nil
-        showNotificationPrompt = false
-    }
-
-    private func handleFavourited(anime: Anime, season: Season?, year: Int?) async {
-        let isSimulcasting = anime.airingSchedule != nil
-        guard isSimulcasting else { return }
-
-        let status = await scheduleNotificationUseCase.authorizationStatus()
-        switch status {
-        case .notDetermined:
-            if notificationPromptDismissCount < 2 {
-                pendingNotificationAnime = anime
-                showNotificationPrompt = true
-            }
-        case .authorized, .provisional:
-            isNotificationsEnabled = true
-            await scheduleNotificationUseCase.scheduleForAnime(anime: anime, season: season, year: year)
-        case .denied:
-            showDeniedBanner = true
-        }
+        await favouriteManager.toggleFavourite(
+            anime: anime,
+            season: anime.season,
+            year: anime.seasonYear,
+            sortOrder: sortOrder
+        )
     }
 
     private func performSearch(query: String) async {

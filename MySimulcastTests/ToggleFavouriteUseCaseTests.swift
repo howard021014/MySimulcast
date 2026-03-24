@@ -80,13 +80,18 @@ struct SimulcastBrowseViewModelFavouritesTests {
         let notificationService = MockNotificationService()
         let scheduleUseCase = ScheduleNotificationUseCase(notificationService: notificationService, isNotificationsEnabled: { true })
         let manageUseCase = ManageNotificationsUseCase(scheduleUseCase: scheduleUseCase, favouritesRepository: favouritesRepo, notificationService: notificationService)
+        let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleUseCase,
+            imageCache: ImageCache()
+        )
         let cache = MockSeasonCacheRepository()
         return SimulcastBrowseViewModel(
             useCase: FetchSimulcastSeasonUseCase(repository: animeRepo, cacheRepository: cache),
-            toggleUseCase: ToggleFavouriteUseCase(repository: favouritesRepo),
-            scheduleNotificationUseCase: scheduleUseCase,
             manageNotificationsUseCase: manageUseCase,
-            networkStatus: MockNetworkStatus()
+            networkStatus: MockNetworkStatus(),
+            favouriteManager: favouriteManager
         )
     }
 

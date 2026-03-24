@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @Environment(SearchViewModel.self) private var viewModel
+    @Environment(FavouriteManager.self) private var favouriteManager
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -33,15 +34,15 @@ struct SearchView: View {
                 viewModel.searchTextChanged()
             }
             .onAppear {
-                Task { await viewModel.reloadFavouriteIDs() }
+                Task { await favouriteManager.loadFavouriteIDs() }
             }
             .sheet(isPresented: Binding(
-                get: { viewModel.showNotificationPrompt },
-                set: { if !$0 { viewModel.onNotificationPromptDismiss() } }
+                get: { favouriteManager.showNotificationPrompt },
+                set: { if !$0 { favouriteManager.onNotificationPromptDismiss() } }
             )) {
                 NotificationPermissionSheet(
-                    onEnable: { Task { await viewModel.onNotificationPromptEnable() } },
-                    onDismiss: { viewModel.onNotificationPromptDismiss() }
+                    onEnable: { Task { await favouriteManager.onNotificationPromptEnable() } },
+                    onDismiss: { favouriteManager.onNotificationPromptDismiss() }
                 )
             }
         }

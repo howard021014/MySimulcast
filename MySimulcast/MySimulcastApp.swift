@@ -9,6 +9,7 @@ struct MySimulcastApp: App {
     private let favouritesViewModel: FavouritesViewModel
     private let searchViewModel: SearchViewModel
     private let settingsViewModel: SettingsViewModel
+    private let favouriteManager: FavouriteManager
 
     init() {
         let container = try! ModelContainer(for: FavouriteEntry.self, CachedSeasonEntry.self)
@@ -33,30 +34,48 @@ struct MySimulcastApp: App {
             notificationService: notificationManager
         )
 
-        browseViewModel = SimulcastBrowseViewModel(
-            useCase: fetchUseCase,
+        let favouriteManager = FavouriteManager(
             toggleUseCase: toggleUseCase,
             scheduleNotificationUseCase: scheduleNotificationUseCase,
+            imageCache: imageCache
+        )
+        self.favouriteManager = favouriteManager
+
+        browseViewModel = SimulcastBrowseViewModel(
+            useCase: fetchUseCase,
             manageNotificationsUseCase: manageNotificationsUseCase,
-            networkStatus: networkMonitor
+            networkStatus: networkMonitor,
+            favouriteManager: favouriteManager
         )
 
         let getUseCase = GetFavouritesUseCase(repository: favouritesRepo)
         favouritesViewModel = FavouritesViewModel(
             getUseCase: getUseCase,
-            toggleUseCase: toggleUseCase,
-            scheduleNotificationUseCase: scheduleNotificationUseCase
+            favouriteManager: favouriteManager
         )
 
         let searchUseCase = SearchAnimeUseCase(repository: animeRepo)
         searchViewModel = SearchViewModel(
             searchUseCase: searchUseCase,
-            toggleUseCase: toggleUseCase,
-            scheduleNotificationUseCase: scheduleNotificationUseCase,
-            networkStatus: networkMonitor
+            networkStatus: networkMonitor,
+            favouriteManager: favouriteManager
         )
 
         settingsViewModel = SettingsViewModel(manageUseCase: manageNotificationsUseCase)
+
+        // Backfill favourite images on launch
+        let cache = imageCache
+        Task {
+            let allFavourites = (try? await favouritesRepo.allFavourites()) ?? []
+            var urls: [URL] = []
+            for fav in allFavourites {
+                if let url = fav.anime.coverImageURL { urls.append(url) }
+                if let url = fav.anime.thumbnailImageURL { urls.append(url) }
+            }
+            if !urls.isEmpty {
+                await cache.storeFavouriteImages(urls: urls)
+            }
+        }
     }
 
     var body: some Scene {
@@ -66,6 +85,7 @@ struct MySimulcastApp: App {
                 .environment(favouritesViewModel)
                 .environment(searchViewModel)
                 .environment(settingsViewModel)
+                .environment(favouriteManager)
                 .environment(\.imageCache, imageCache)
         }
     }

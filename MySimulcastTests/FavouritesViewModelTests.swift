@@ -18,11 +18,16 @@ struct FavouritesViewModelTests {
         let repo = MockFavouritesRepository()
         repo.storedFavourites = favourites
         let service = MockNotificationService()
+        let toggleUseCase = ToggleFavouriteUseCase(repository: repo)
         let scheduleUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleUseCase,
+            imageCache: ImageCache()
+        )
         return FavouritesViewModel(
             getUseCase: GetFavouritesUseCase(repository: repo),
-            toggleUseCase: ToggleFavouriteUseCase(repository: repo),
-            scheduleNotificationUseCase: scheduleUseCase
+            favouriteManager: favouriteManager
         )
     }
 

@@ -2,13 +2,14 @@ import SwiftUI
 
 struct FavouritesView: View {
     @Environment(FavouritesViewModel.self) private var viewModel
+    @Environment(FavouriteManager.self) private var favouriteManager
 
     private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible())]
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                if viewModel.showDeniedBanner {
+                if favouriteManager.showDeniedBanner {
                     deniedBanner
                         .padding(.horizontal)
                 }
@@ -36,7 +37,7 @@ struct FavouritesView: View {
             .onAppear {
                 Task {
                     await viewModel.load()
-                    await viewModel.checkDeniedStatus()
+                    await favouriteManager.checkDeniedStatus()
                 }
             }
         }
@@ -125,4 +126,3 @@ struct FavouritesView: View {
             .frame(maxWidth: .infinity, minHeight: 200)
     }
 }
-

@@ -118,7 +118,12 @@ struct SimulcastBrowseViewModelLegacyTests {
         let repo = MockFavouritesRepository()
         let scheduleUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
         let manageUseCase = ManageNotificationsUseCase(scheduleUseCase: scheduleUseCase, favouritesRepository: repo, notificationService: service)
-        return SimulcastBrowseViewModel(useCase: useCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleUseCase, manageNotificationsUseCase: manageUseCase, networkStatus: networkStatus)
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleUseCase,
+            imageCache: ImageCache()
+        )
+        return SimulcastBrowseViewModel(useCase: useCase, manageNotificationsUseCase: manageUseCase, networkStatus: networkStatus, favouriteManager: favouriteManager)
     }
 
     @Test("Starts with all seasons idle")

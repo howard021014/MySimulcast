@@ -23,7 +23,12 @@ struct SearchViewModelTests {
         let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
         let service = MockNotificationService()
         let scheduleNotificationUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
-        let vm = SearchViewModel(searchUseCase: searchUseCase, toggleUseCase: toggleUseCase, scheduleNotificationUseCase: scheduleNotificationUseCase, networkStatus: networkStatus)
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleNotificationUseCase,
+            imageCache: ImageCache()
+        )
+        let vm = SearchViewModel(searchUseCase: searchUseCase, networkStatus: networkStatus, favouriteManager: favouriteManager)
         return (vm, animeRepo, favouritesRepo, networkStatus)
     }
 
@@ -64,7 +69,7 @@ struct SearchViewModelTests {
         let result = SearchResult(anime: [makeAnime(id: 1), makeAnime(id: 2)], currentPage: 1, hasNextPage: false)
         let (vm, _, _, _) = makeViewModel(searchResult: result, favouriteIDs: [2])
 
-        await vm.reloadFavouriteIDs()
+        await vm.favouriteManager.loadFavouriteIDs()
         vm.results = [makeAnime(id: 1), makeAnime(id: 2)]
 
         let displayed = vm.displayedResults
@@ -88,7 +93,7 @@ struct SearchViewModelTests {
         let (vm, _, _, _) = makeViewModel(favouriteIDs: [1])
         let anime = makeAnime(id: 1, season: .winter, seasonYear: 2026)
         vm.results = [anime]
-        await vm.reloadFavouriteIDs()
+        await vm.favouriteManager.loadFavouriteIDs()
 
         await vm.toggleFavourite(anime: anime)
 
@@ -184,11 +189,16 @@ struct SearchViewModelTests {
         let favouritesRepo = MockFavouritesRepository()
         let service = MockNotificationService()
         let scheduleNotificationUseCase = ScheduleNotificationUseCase(notificationService: service, isNotificationsEnabled: { true })
+        let toggleUseCase = ToggleFavouriteUseCase(repository: favouritesRepo)
+        let favouriteManager = FavouriteManager(
+            toggleUseCase: toggleUseCase,
+            scheduleNotificationUseCase: scheduleNotificationUseCase,
+            imageCache: ImageCache()
+        )
         let vm = SearchViewModel(
             searchUseCase: SearchAnimeUseCase(repository: animeRepo),
-            toggleUseCase: ToggleFavouriteUseCase(repository: favouritesRepo),
-            scheduleNotificationUseCase: scheduleNotificationUseCase,
-            networkStatus: MockNetworkStatus()
+            networkStatus: MockNetworkStatus(),
+            favouriteManager: favouriteManager
         )
 
         vm.searchText = "test query"

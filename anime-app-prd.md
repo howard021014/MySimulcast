@@ -260,8 +260,7 @@ query SearchAnime($query: String, $page: Int) {
 |------|---------|----------|
 | Anime metadata | SwiftData + NSCache | Non-favourited entries older than current season eligible for eviction |
 | Favourited anime | SwiftData | Never evicted, user must unfavourite |
-| Thumbnail images | FileManager (disk) | Evicted when parent anime is evicted |
-| Full-res images (favourited) | FileManager (disk) | Never evicted |
+| Thumbnail images | FileManager (disk) | Evicted when parent anime is evicted; never evicted for favourited anime |
 | Decoded images (visible) | NSCache (memory) | Evicted by system under memory pressure |
 
 ---
@@ -330,7 +329,7 @@ query SearchAnime($query: String, $page: Int) {
 | US-08: Detail sheet | Bottom sheet with full description, airing schedule, favourite toggle | Done |
 | US-08: Appear animation (stagger) | Cards animate in with spring stagger on grid first load | Not Done |
 | **Feature 7 — UI Polish** | | |
-| US-09: Remove card flip animation | Remove Y-axis flip interaction; tapping a card opens the detail sheet directly | Not Done |
+| US-09: Remove card flip animation | Remove Y-axis flip interaction; tapping a card opens the detail sheet directly | Done |
 | US-10: Improve detail sheet UI | Polish the detail sheet layout, typography, spacing, and visual hierarchy | Not Done |
 | US-11: Overall UI polish | Refine colors, spacing, typography, and visual consistency across all screens | Not Done |
 | **Technical / Infrastructure** | | |
@@ -340,7 +339,7 @@ query SearchAnime($query: String, $page: Int) {
 | Clean Architecture | Domain pure Swift, DI at composition root, layer separation | Done |
 | Unit test suite | 12 test files covering all layers with mocks (Swift Testing) | Done |
 | Image disk persistence (FileManager) | Persistent disk cache for images | Done |
-| Full-res image download for favourites | Download high-res images for favourited anime | Not Done |
+| Persist thumbnails for favourites | Never evict cached thumbnail images for favourited anime | Done |
 | Intelligent prefetching in search | Prefetch next page before user reaches bottom | Not Done |
 
 ---
@@ -366,11 +365,11 @@ query SearchAnime($query: String, $page: Int) {
 - [x] Past seasons browsing
 
 ### V2 — Polish
-- [ ] Full-res image download for favourites
+- [x] Persist thumbnails for favourites (never evict cached images for favourited anime)
 - [x] Image disk persistence (FileManager)
 - [ ] Intelligent prefetching in search
 - [ ] Appear animation (spring stagger on grid load)
-- [ ] Remove card flip animation (tap card → open detail sheet directly)
+- [x] Remove card flip animation (tap card → open detail sheet directly)
 - [ ] Improve detail sheet UI (layout, typography, visual hierarchy)
 - [ ] Overall UI polish (colors, spacing, typography, consistency)
 
