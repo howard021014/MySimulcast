@@ -4,32 +4,27 @@ struct SearchView: View {
     @Environment(SearchViewModel.self) private var viewModel
     @Environment(FavouriteManager.self) private var favouriteManager
 
+    @FocusState private var fieldFocused: Bool
+
+    private var isActive: Bool {
+        fieldFocused || !viewModel.searchText.isEmpty
+    }
+
     var body: some View {
-        @Bindable var viewModel = viewModel
+        @Bindable var vm = viewModel
         NavigationStack {
-            Group {
-                switch viewModel.state {
-                case .idle:
-                    if viewModel.isOffline {
-                        offlinePlaceholderView
-                    } else {
-                        placeholderView
-                    }
-                case .loading:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                case .loaded:
-                    if viewModel.displayedResults.isEmpty {
-                        emptyResultsView
-                    } else {
-                        resultsList
-                    }
-                case .error(let message):
-                    errorView(message: message)
+            VStack(alignment: .leading, spacing: 12) {
+                if !isActive {
+                    largeTitle
                 }
+
+                searchBar(text: $vm.searchText)
+
+                content
             }
-            .navigationTitle("Search")
-            .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search anime by title")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsBackgroundGradient()
+            .toolbar(.hidden, for: .navigationBar)
             .onChange(of: viewModel.searchText) {
                 viewModel.searchTextChanged()
             }
@@ -48,65 +43,175 @@ struct SearchView: View {
         }
     }
 
-    private var offlinePlaceholderView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "wifi.slash")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("Search requires an internet connection")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var largeTitle: some View {
+        Text("Search")
+            .font(Typography.largeTitle)
+            .tracking(-0.8)
+            .foregroundStyle(Color.dsText)
+            .padding(.horizontal, Spacing.pageH)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
     }
 
-    private var placeholderView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("Search for anime by title")
-                .foregroundStyle(.secondary)
+    private func searchBar(text: Binding<String>) -> some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isActive ? Color.dsAccent : Color.dsTextFaint)
+
+                TextField("",
+                          text: text,
+                          prompt: Text("Search anime by title").foregroundStyle(Color.dsTextFaint))
+                    .font(Typography.rowTitle)
+                    .foregroundStyle(Color.dsText)
+                    .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .focused($fieldFocused)
+
+                if !text.wrappedValue.isEmpty {
+                    Button {
+                        text.wrappedValue = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.dsTextFaint)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 38)
+            .background(
+                RoundedRectangle(cornerRadius: Radii.field, style: .continuous)
+                    .fill(Color.dsFieldBg)
+            )
+
+            if isActive {
+                Button {
+                    fieldFocused = false
+                    text.wrappedValue = ""
+                } label: {
+                    Text("Cancel")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.dsAccent)
+                }
+                .buttonStyle(.plain)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, Spacing.pageH)
+        .animation(.easeInOut(duration: 0.18), value: isActive)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch viewModel.state {
+        case .idle:
+            if viewModel.isOffline {
+                offlinePlaceholderView
+            } else if isActive {
+                Spacer()
+            } else {
+                EmptyStateView(
+                    systemImage: "magnifyingglass",
+                    title: "Find your next show",
+                    message: "Search the entire AniList catalog by title."
+                )
+                .padding(.bottom, Spacing.tabClearance)
+            }
+        case .loading:
+            ProgressView()
+                .tint(Color.dsAccent)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .loaded:
+            if viewModel.displayedResults.isEmpty {
+                emptyResultsView
+            } else {
+                resultsList
+            }
+        case .error(let message):
+            errorView(message: message)
+        }
+    }
+
+    private var offlinePlaceholderView: some View {
+        EmptyStateView(
+            systemImage: "wifi.slash",
+            title: "You're offline",
+            message: "Search requires an internet connection."
+        )
+        .padding(.bottom, Spacing.tabClearance)
     }
 
     private var emptyResultsView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "text.magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No results found")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        EmptyStateView(
+            systemImage: "text.magnifyingglass",
+            title: "No results found",
+            message: "Try a different title or check the spelling."
+        )
+        .padding(.bottom, Spacing.tabClearance)
     }
 
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 38))
+                .foregroundStyle(Color.dsTextDim)
             Text(message)
-                .foregroundStyle(.secondary)
+                .font(Typography.body)
+                .foregroundStyle(Color.dsTextDim)
                 .multilineTextAlignment(.center)
-            Button("Retry") {
+            Button {
                 viewModel.retry()
+            } label: {
+                Text("Try Again")
+                    .font(Typography.chip)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.dsAccent))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var resultsList: some View {
-        List(viewModel.displayedResults) { anime in
-            SearchResultRow(anime: anime) {
-                Task { await viewModel.toggleFavourite(anime: anime) }
+        ScrollView {
+            VStack(spacing: 0) {
+                Text("\(viewModel.displayedResults.count) RESULTS")
+                    .font(Typography.groupHeader)
+                    .tracking(0.8)
+                    .foregroundStyle(Color.dsTextDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(Array(viewModel.displayedResults.enumerated()), id: \.element.id) { index, anime in
+                    SearchResultRow(anime: anime) {
+                        Task { await viewModel.toggleFavourite(anime: anime) }
+                    }
+                    .onAppear {
+                        viewModel.loadNextPageIfNeeded(currentItem: anime)
+                    }
+
+                    if index < viewModel.displayedResults.count - 1 {
+                        Rectangle()
+                            .fill(Color.dsSeparator)
+                            .frame(height: 0.5)
+                    }
+                }
+
+                if viewModel.isLoadingNextPage {
+                    ProgressView()
+                        .tint(Color.dsAccent)
+                        .padding(.vertical, 16)
+                }
             }
-            .onAppear {
-                viewModel.loadNextPageIfNeeded(currentItem: anime)
-            }
+            .padding(.horizontal, Spacing.pageH)
+            .padding(.bottom, Spacing.tabClearance)
         }
-        .listStyle(.plain)
         .scrollDismissesKeyboard(.interactively)
     }
 }

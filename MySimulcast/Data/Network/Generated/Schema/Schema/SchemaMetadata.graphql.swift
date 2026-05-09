@@ -36,6 +36,8 @@ extension AniListAPI {
       case "Page": return AniListAPI.Objects.Page
       case "PageInfo": return AniListAPI.Objects.PageInfo
       case "Query": return AniListAPI.Objects.Query
+      case "Studio": return AniListAPI.Objects.Studio
+      case "StudioConnection": return AniListAPI.Objects.StudioConnection
       default: return nil
       }
     }

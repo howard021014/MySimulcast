@@ -10,7 +10,7 @@ query SearchAnime($search: String!, $page: Int, $perPage: Int, $status_not: Medi
         romaji
         english
       }
-      description(asHtml: false)
+      description(asHtml: true)
       coverImage {
         extraLarge
         large
@@ -21,6 +21,13 @@ query SearchAnime($search: String!, $page: Int, $perPage: Int, $status_not: Medi
       }
       season
       seasonYear
+      episodes
+      genres
+      studios(isMain: true) {
+        nodes {
+          name
+        }
+      }
     }
   }
 }

@@ -330,8 +330,10 @@ query SearchAnime($query: String, $page: Int) {
 | US-08: Appear animation (stagger) | Cards animate in with spring stagger on grid first load | Not Done |
 | **Feature 7 — UI Polish** | | |
 | US-09: Remove card flip animation | Remove Y-axis flip interaction; tapping a card opens the detail sheet directly | Done |
-| US-10: Improve detail sheet UI | Polish the detail sheet layout, typography, spacing, and visual hierarchy | Not Done |
-| US-11: Overall UI polish | Refine colors, spacing, typography, and visual consistency across all screens | Not Done |
+| US-10: Improve detail sheet UI | Polish the detail sheet layout, typography, spacing, and visual hierarchy | Done |
+| US-11: Overall UI polish | Refine colors, spacing, typography, and visual consistency across all screens | Done |
+| US-12: Variant A "Midnight" theme | Implement the dark Midnight design system: tokens (colors/radii/typography), restyled card + chip + empty state + search field, all 7 screens, force `.preferredColorScheme(.dark)`, system `TabView` styled via `UITabBarAppearance` | Done |
+| US-13: Extend `Anime` with studios / genres / episodes | Add fields to domain model + both Apollo queries, regenerate codegen, populate from AniList for the detail sheet stat tiles | Done |
 | **Technical / Infrastructure** | | |
 | AniList GraphQL client (Apollo iOS) | Apollo codegen, type-safe queries, pagination | Done |
 | Custom image cache (NSCache + URLSession) | Memory cache with 200 image / 50MB limit | Done |
@@ -370,8 +372,10 @@ query SearchAnime($query: String, $page: Int) {
 - [ ] Intelligent prefetching in search
 - [ ] Appear animation (spring stagger on grid load)
 - [x] Remove card flip animation (tap card → open detail sheet directly)
-- [ ] Improve detail sheet UI (layout, typography, visual hierarchy)
-- [ ] Overall UI polish (colors, spacing, typography, consistency)
+- [x] Improve detail sheet UI (layout, typography, visual hierarchy)
+- [x] Overall UI polish (colors, spacing, typography, consistency)
+- [x] Variant A "Midnight" theme — design tokens + dark restyle of all 7 screens
+- [x] Extend `Anime` model + Apollo queries with studios / genres / episodes
 
 ---
 

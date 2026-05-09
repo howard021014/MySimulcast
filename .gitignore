@@ -60,3 +60,6 @@ apollo-ios-cli
 .prompts/
 Feature_prompts/
 Learning_results/
+
+# Local resource folder (design references, ad-hoc screenshots, working notes)
+resources/

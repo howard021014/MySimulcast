@@ -11,12 +11,12 @@ struct ShimmerModifier: ViewModifier {
                     let height = geometry.size.height
 
                     LinearGradient(
-                        colors: [.clear, .white.opacity(0.4), .clear],
+                        colors: [.clear, Color.dsShimmer, .clear],
                         startPoint: .init(x: phase, y: phase * 0.5),
                         endPoint: .init(x: phase + 0.5, y: phase * 0.5 + 0.3)
                     )
                     .frame(width: width, height: height)
-                    .blendMode(.screen)
+                    .blendMode(.plusLighter)
                 }
             }
             .onAppear {

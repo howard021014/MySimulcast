@@ -12,6 +12,8 @@ struct MySimulcastApp: App {
     private let favouriteManager: FavouriteManager
 
     init() {
+        Self.configureTabBarAppearance()
+
         let container = try! ModelContainer(for: FavouriteEntry.self, CachedSeasonEntry.self)
         modelContainer = container
 
@@ -88,5 +90,29 @@ struct MySimulcastApp: App {
                 .environment(favouriteManager)
                 .environment(\.imageCache, imageCache)
         }
+    }
+
+    private static func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundColor = UIColor(Color.dsTabBarBg)
+        appearance.shadowColor = UIColor(Color.dsSeparator)
+
+        let unselectedColor = UIColor(Color.dsTextFaint)
+        let selectedColor = UIColor(Color.dsAccent)
+
+        for itemAppearance in [
+            appearance.stackedLayoutAppearance,
+            appearance.inlineLayoutAppearance,
+            appearance.compactInlineLayoutAppearance
+        ] {
+            itemAppearance.normal.iconColor = unselectedColor
+            itemAppearance.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
+            itemAppearance.selected.iconColor = selectedColor
+            itemAppearance.selected.titleTextAttributes = [.foregroundColor: selectedColor]
+        }
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }

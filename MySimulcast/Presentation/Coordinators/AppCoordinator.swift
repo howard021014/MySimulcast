@@ -12,5 +12,7 @@ struct AppCoordinator: View {
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
+        .tint(Color.dsAccent)
+        .preferredColorScheme(.dark)
     }
 }

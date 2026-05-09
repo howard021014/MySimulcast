@@ -12,6 +12,10 @@ import Foundation
     var nextEpisode: Int?
     var nextAiringAt: Date?
     var sortOrder: Int = Int.max
+    var synopsis: String?
+    var studios: [String]?
+    var genres: [String]?
+    var episodes: Int?
 
     init(anime: Anime, season: Season?, year: Int?, sortOrder: Int) {
         self.animeID = anime.id
@@ -24,5 +28,9 @@ import Foundation
         self.nextEpisode = anime.airingSchedule?.nextEpisode
         self.nextAiringAt = anime.airingSchedule?.nextAiringAt
         self.sortOrder = sortOrder
+        self.synopsis = anime.description
+        self.studios = anime.studios
+        self.genres = anime.genres
+        self.episodes = anime.episodes
     }
 }

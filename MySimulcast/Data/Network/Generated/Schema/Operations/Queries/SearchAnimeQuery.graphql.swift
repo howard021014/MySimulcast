@@ -9,7 +9,7 @@ extension AniListAPI {
     static let operationName: String = "SearchAnime"
     static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchAnime($search: String!, $page: Int, $perPage: Int, $status_not: MediaStatus) { Page(page: $page, perPage: $perPage) { __typename pageInfo { __typename currentPage hasNextPage } media(type: ANIME, search: $search, status_not: $status_not, sort: SEARCH_MATCH) { __typename id title { __typename romaji english } description(asHtml: false) coverImage { __typename extraLarge large } nextAiringEpisode { __typename episode airingAt } season seasonYear } } }"#
+        #"query SearchAnime($search: String!, $page: Int, $perPage: Int, $status_not: MediaStatus) { Page(page: $page, perPage: $perPage) { __typename pageInfo { __typename currentPage hasNextPage } media(type: ANIME, search: $search, status_not: $status_not, sort: SEARCH_MATCH) { __typename id title { __typename romaji english } description(asHtml: true) coverImage { __typename extraLarge large } nextAiringEpisode { __typename episode airingAt } season seasonYear episodes genres studios(isMain: true) { __typename nodes { __typename name } } } } }"#
       ))
 
     public var search: String
@@ -114,11 +114,14 @@ extension AniListAPI {
             .field("__typename", String.self),
             .field("id", Int.self),
             .field("title", Title?.self),
-            .field("description", String?.self, arguments: ["asHtml": false]),
+            .field("description", String?.self, arguments: ["asHtml": true]),
             .field("coverImage", CoverImage?.self),
             .field("nextAiringEpisode", NextAiringEpisode?.self),
             .field("season", GraphQLEnum<AniListAPI.MediaSeason>?.self),
             .field("seasonYear", Int?.self),
+            .field("episodes", Int?.self),
+            .field("genres", [String?]?.self),
+            .field("studios", Studios?.self, arguments: ["isMain": true]),
           ] }
           static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             SearchAnimeQuery.Data.Page.Medium.self
@@ -138,6 +141,12 @@ extension AniListAPI {
           var season: GraphQLEnum<AniListAPI.MediaSeason>? { __data["season"] }
           /// The season year the media was initially released in
           var seasonYear: Int? { __data["seasonYear"] }
+          /// The amount of episodes the anime has when complete
+          var episodes: Int? { __data["episodes"] }
+          /// The genres of the media
+          var genres: [String?]? { __data["genres"] }
+          /// The companies who produced the media
+          var studios: Studios? { __data["studios"] }
 
           /// Page.Medium.Title
           ///
@@ -206,6 +215,45 @@ extension AniListAPI {
             var episode: Int { __data["episode"] }
             /// The time the episode airs at
             var airingAt: Int { __data["airingAt"] }
+          }
+
+          /// Page.Medium.Studios
+          ///
+          /// Parent Type: `StudioConnection`
+          struct Studios: AniListAPI.SelectionSet {
+            let __data: DataDict
+            init(_dataDict: DataDict) { __data = _dataDict }
+
+            static var __parentType: any ApolloAPI.ParentType { AniListAPI.Objects.StudioConnection }
+            static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("nodes", [Node?]?.self),
+            ] }
+            static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              SearchAnimeQuery.Data.Page.Medium.Studios.self
+            ] }
+
+            var nodes: [Node?]? { __data["nodes"] }
+
+            /// Page.Medium.Studios.Node
+            ///
+            /// Parent Type: `Studio`
+            struct Node: AniListAPI.SelectionSet {
+              let __data: DataDict
+              init(_dataDict: DataDict) { __data = _dataDict }
+
+              static var __parentType: any ApolloAPI.ParentType { AniListAPI.Objects.Studio }
+              static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("name", String.self),
+              ] }
+              static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                SearchAnimeQuery.Data.Page.Medium.Studios.Node.self
+              ] }
+
+              /// The name of the studio
+              var name: String { __data["name"] }
+            }
           }
         }
       }

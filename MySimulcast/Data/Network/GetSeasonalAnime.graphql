@@ -10,7 +10,7 @@ query GetSeasonalAnime($season: MediaSeason!, $seasonYear: Int!, $page: Int, $pe
         romaji
         english
       }
-      description(asHtml: false)
+      description(asHtml: true)
       coverImage {
         extraLarge
         large
@@ -18,6 +18,13 @@ query GetSeasonalAnime($season: MediaSeason!, $seasonYear: Int!, $page: Int, $pe
       nextAiringEpisode {
         episode
         airingAt
+      }
+      episodes
+      genres
+      studios(isMain: true) {
+        nodes {
+          name
+        }
       }
     }
   }

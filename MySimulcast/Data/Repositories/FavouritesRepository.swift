@@ -38,11 +38,14 @@ actor FavouritesRepository: FavouritesRepositoryProtocol {
                 title: entry.animeTitle,
                 coverImageURL: entry.coverImageURLString.flatMap(URL.init(string:)),
                 thumbnailImageURL: entry.thumbnailImageURLString.flatMap(URL.init(string:)),
-                description: nil,
+                description: entry.synopsis,
                 airingSchedule: airingSchedule,
                 season: season,
                 seasonYear: entry.seasonYear,
-                isFavourited: true
+                isFavourited: true,
+                studios: entry.studios,
+                genres: entry.genres,
+                episodes: entry.episodes
             )
             return FavouriteAnime(anime: anime, season: season, year: entry.seasonYear, addedAt: entry.addedAt, sortOrder: entry.sortOrder)
         }

@@ -88,6 +88,9 @@ final class AnimeRepository: AnimeRepositoryProtocol {
             )
         }
 
+        let genres = medium.genres?.compactMap { $0 }
+        let studios = medium.studios?.nodes?.compactMap { $0?.name }
+
         return Anime(
             id: medium.id,
             title: title,
@@ -97,7 +100,10 @@ final class AnimeRepository: AnimeRepositoryProtocol {
             airingSchedule: airingSchedule,
             season: nil,
             seasonYear: nil,
-            isFavourited: false
+            isFavourited: false,
+            studios: studios,
+            genres: genres,
+            episodes: medium.episodes
         )
     }
 
@@ -123,6 +129,9 @@ final class AnimeRepository: AnimeRepositoryProtocol {
             }
         }
 
+        let genres = medium.genres?.compactMap { $0 }
+        let studios = medium.studios?.nodes?.compactMap { $0?.name }
+
         return Anime(
             id: medium.id,
             title: title,
@@ -132,7 +141,10 @@ final class AnimeRepository: AnimeRepositoryProtocol {
             airingSchedule: airingSchedule,
             season: season,
             seasonYear: medium.seasonYear,
-            isFavourited: false
+            isFavourited: false,
+            studios: studios,
+            genres: genres,
+            episodes: medium.episodes
         )
     }
 }
