@@ -21,6 +21,7 @@ extension Color {
     static let dsDestructive      = Color(hex: 0xE54E6C)
     static let dsCardInsetStroke  = Color.white.opacity(0.05)
     static let dsShimmer          = Color.white.opacity(0.10)
+    static let dsSkeletonBase     = Color(hex: 0x26243A)
 
     init(hex: UInt32, opacity: Double = 1.0) {
         let r = Double((hex >> 16) & 0xFF) / 255.0

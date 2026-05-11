@@ -121,9 +121,7 @@ struct SearchView: View {
                 .padding(.bottom, Spacing.tabClearance)
             }
         case .loading:
-            ProgressView()
-                .tint(Color.dsAccent)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            skeletonResultsList
         case .loaded:
             if viewModel.displayedResults.isEmpty {
                 emptyResultsView
@@ -175,6 +173,31 @@ struct SearchView: View {
             .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var skeletonResultsList: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                SkeletonBlock(height: 11, radius: 3)
+                    .frame(width: 80)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(0..<6, id: \.self) { index in
+                    SearchResultRowSkeleton()
+
+                    if index < 5 {
+                        Rectangle()
+                            .fill(Color.dsSeparator)
+                            .frame(height: 0.5)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.pageH)
+            .padding(.bottom, Spacing.tabClearance)
+        }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private var resultsList: some View {

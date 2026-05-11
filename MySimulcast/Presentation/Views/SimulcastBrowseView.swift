@@ -98,9 +98,7 @@ struct SimulcastBrowseView: View {
 
                 switch viewModel.stateForSeason(season) {
                 case .idle, .loading:
-                    ProgressView()
-                        .tint(Color.dsAccent)
-                        .frame(maxWidth: .infinity, minHeight: 200)
+                    skeletonGrid
                 case .loaded:
                     animeGrid(for: season)
                 case .error(let message):
@@ -149,6 +147,14 @@ struct SimulcastBrowseView: View {
                 AnimeCardView(anime: anime, scheduleText: scheduleText(for: anime)) {
                     Task { await viewModel.toggleFavourite(anime: anime) }
                 }
+            }
+        }
+    }
+
+    private var skeletonGrid: some View {
+        LazyVGrid(columns: columns, spacing: Spacing.gridGutter) {
+            ForEach(0..<6, id: \.self) { _ in
+                AnimeCardSkeleton()
             }
         }
     }
